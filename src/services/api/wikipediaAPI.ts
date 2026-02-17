@@ -9,12 +9,16 @@ export class WikipediaAPI extends APIClient {
 
   async enrichSpeciesWithWikipedia(species: Species): Promise<Species> {
     try {
-      // 1. 学名または和名で記事検索
-      const searchTerm = species.commonName || species.scientificName;
-      const pageInfo = await this.searchPage(searchTerm);
+      // 1. 学名で記事検索（優先）、見つからなければ和名で検索
+      let pageInfo = await this.searchPage(species.scientificName);
+
+      if (!pageInfo && species.commonName) {
+        console.log(`No page found for scientific name: ${species.scientificName}, trying common name...`);
+        pageInfo = await this.searchPage(species.commonName);
+      }
 
       if (!pageInfo) {
-        console.log(`No Wikipedia page found for: ${searchTerm}`);
+        console.log(`No Wikipedia page found for: ${species.scientificName}`);
         return species;
       }
 

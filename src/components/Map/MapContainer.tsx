@@ -57,6 +57,11 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
     drawRef.current = draw;
     map.addControl(draw as any, 'top-left');
 
+    // デフォルトでポリゴン描画モードを有効化
+    map.once('load', () => {
+      draw.changeMode('draw_polygon');
+    });
+
     // ベースマップ切り替えコントロール追加
     const basemapControl = new BasemapControl({
       initialBasemap: initialBasemap,

@@ -64,20 +64,22 @@
   display: grid;
   grid-template-columns: 1fr 400px;
   position: relative;
-  overflow: hidden;
   gap: 0;
+  height: calc(100vh - 140px); /* ヘッダーの高さを引く */
+  max-height: calc(100vh - 140px);
+  overflow: hidden;
 }
 
 @media (max-width: 1024px) {
   .app-main {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 300px;
+    grid-template-rows: 50vh 50vh;
   }
 }
 
 @media (max-width: 768px) {
   .app-main {
-    grid-template-rows: 1fr 400px;
+    grid-template-rows: 60vh 40vh;
   }
 }
 

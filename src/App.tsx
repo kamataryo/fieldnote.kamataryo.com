@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { MapContainer } from '@components/Map/MapContainer'
 import { SpeciesListPanel } from '@components/SpeciesList/SpeciesListPanel'
 import type { Feature, Polygon } from '@types/map'
@@ -7,22 +8,22 @@ import './styles/App.css'
 function App() {
   const { setPolygon, fetchSpecies, clearSpecies, species, isLoading, error, progress } = useAppStore()
 
-  const handlePolygonCreated = async (polygon: Feature<Polygon>) => {
+  const handlePolygonCreated = useCallback(async (polygon: Feature<Polygon>) => {
     console.log('App: Polygon created', polygon)
     setPolygon(polygon)
     await fetchSpecies(polygon)
-  }
+  }, [setPolygon, fetchSpecies])
 
-  const handlePolygonUpdated = async (polygon: Feature<Polygon>) => {
+  const handlePolygonUpdated = useCallback(async (polygon: Feature<Polygon>) => {
     console.log('App: Polygon updated', polygon)
     setPolygon(polygon)
     await fetchSpecies(polygon)
-  }
+  }, [setPolygon, fetchSpecies])
 
-  const handlePolygonDeleted = () => {
+  const handlePolygonDeleted = useCallback(() => {
     console.log('App: Polygon deleted')
     clearSpecies()
-  }
+  }, [clearSpecies])
 
   return (
     <div className="app">
