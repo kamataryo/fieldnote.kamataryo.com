@@ -7,7 +7,7 @@ import type { Species } from '@types/species';
 import './SpeciesListPanel.css';
 
 export function SpeciesListPanel() {
-  const { species, isLoading, filters, sortBy, updateFilters, setSortBy } = useAppStore();
+  const { species, filters, sortBy, updateFilters, setSortBy } = useAppStore();
 
   // フィルタリング＆ソート
   const filteredAndSortedSpecies = useMemo(() => {
@@ -50,7 +50,7 @@ export function SpeciesListPanel() {
     return result;
   }, [species, filters, sortBy]);
 
-  if (species.length === 0 && !isLoading) {
+  if (species.length === 0) {
     return (
       <div className="species-list-panel">
         <div className="species-list-empty">
@@ -83,18 +83,11 @@ export function SpeciesListPanel() {
       )}
 
       <div className="species-list-scroll">
-        {isLoading ? (
-          <div className="species-list-loading">
-            <div className="spinner"></div>
-            <p>データを読み込み中...</p>
-          </div>
-        ) : (
-          <div className="species-list-grid">
-            {filteredAndSortedSpecies.map((s) => (
-              <SpeciesCard key={s.id} species={s} />
-            ))}
-          </div>
-        )}
+        <div className="species-list-grid">
+          {filteredAndSortedSpecies.map((s) => (
+            <SpeciesCard key={s.id} species={s} />
+          ))}
+        </div>
       </div>
 
       {species.length > 0 && <ExportPanel />}

@@ -10,6 +10,7 @@ interface AppState {
 
   // 生物データ
   species: Species[];
+  allSpecies: Species[]; // iNaturalistから取得した全種（フィルタリング前）
   isLoading: boolean;
   error: string | null;
   progress: {
@@ -18,25 +19,32 @@ interface AppState {
     message: string;
   } | null;
 
+  // モーダル状態
+  showTaxonModal: boolean;
+
   // フィルタ・ソート
   filters: SpeciesFilters;
   sortBy: SortBy;
 
   // アクション
   setPolygon: (polygon: Feature<Polygon>) => void;
-  fetchSpecies: (polygon: Feature<Polygon>) => Promise<void>;
+  fetchInitialSpecies: (polygon: Feature<Polygon>) => Promise<void>; // Step 1: iNaturalistのみ
+  enrichWithWikipedia: (selectedSpeciesIds: Set<number>) => Promise<void>; // Step 2: Wikipedia
   updateFilters: (filters: Partial<SpeciesFilters>) => void;
   setSortBy: (sortBy: SortBy) => void;
   clearSpecies: () => void;
+  setShowTaxonModal: (show: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   // 初期状態
   currentPolygon: null,
   species: [],
+  allSpecies: [],
   isLoading: false,
   error: null,
   progress: null,
+  showTaxonModal: false,
   filters: {
     hasPhoto: false,
     searchTerm: '',
@@ -48,29 +56,86 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentPolygon: polygon });
   },
 
-  // 生物データ取得
-  fetchSpecies: async (polygon) => {
-    set({ isLoading: true, error: null, progress: { current: 0, total: 0, message: '観察データを取得中...' } });
+  // モーダル表示設定
+  setShowTaxonModal: (show) => {
+    set({ showTaxonModal: show });
+  },
+
+  // Step 1: iNaturalistから初期データ取得（Wikipediaは取得しない）
+  fetchInitialSpecies: async (polygon) => {
+    set({
+      isLoading: true,
+      error: null,
+      progress: { current: 0, total: 0, message: 'iNaturalistから観察データを取得中...' },
+      showTaxonModal: true, // 最初からモーダルを表示
+      allSpecies: [], // リセット
+      species: [],
+    });
 
     try {
-      // 1. iNaturalist APIから観察データ取得
       const iNaturalistAPI = new INaturalistAPI();
-      let species = await iNaturalistAPI.getObservationsInPolygon(polygon);
+      const species = await iNaturalistAPI.getObservationsInPolygon(
+        polygon,
+        (current, total, message) => {
+          // 進捗を更新
+          set({
+            progress: { current, total, message },
+          });
+        }
+      );
 
       console.log(`Fetched ${species.length} species from iNaturalist`);
 
-      set({
-        species,
-        progress: { current: species.length, total: species.length, message: 'Wikipedia情報を取得中...' },
-      });
+      // 観察記録が0件の場合
+      if (species.length === 0) {
+        set({
+          allSpecies: [],
+          species: [],
+          isLoading: false,
+          progress: { current: 0, total: 0, message: 'この範囲に観察記録がありませんでした' },
+          // モーダルは開いたまま
+        });
+        return;
+      }
 
-      // 2. Wikipedia情報付加（並列処理、10並列まで）
+      set({
+        allSpecies: species,
+        species: [],
+        isLoading: false,
+        progress: null,
+        // showTaxonModal: true は既に設定済み
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
+      console.error('Error fetching species:', error);
+      set({
+        error: errorMessage,
+        isLoading: false,
+        progress: null,
+        showTaxonModal: false, // エラー時はモーダルを閉じる
+      });
+    }
+  },
+
+  // Step 2: 選択された種のみWikipedia情報を取得
+  enrichWithWikipedia: async (selectedSpeciesIds) => {
+    const { allSpecies } = get();
+    const selectedSpecies = allSpecies.filter((s) => selectedSpeciesIds.has(s.id));
+
+    set({
+      isLoading: true,
+      error: null,
+      progress: { current: 0, total: selectedSpecies.length, message: 'Wikipedia情報を取得中...' },
+      // showTaxonModal はそのまま（モーダルを閉じない）
+    });
+
+    try {
       const wikipediaAPI = new WikipediaAPI();
       const chunkSize = 10;
       const enrichedSpecies: Species[] = [];
 
-      for (let i = 0; i < species.length; i += chunkSize) {
-        const chunk = species.slice(i, i + chunkSize);
+      for (let i = 0; i < selectedSpecies.length; i += chunkSize) {
+        const chunk = selectedSpecies.slice(i, i + chunkSize);
         const enrichedChunk = await Promise.allSettled(
           chunk.map((s) => wikipediaAPI.enrichSpeciesWithWikipedia(s))
         );
@@ -79,7 +144,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           if (result.status === 'fulfilled') {
             enrichedSpecies.push(result.value);
           } else {
-            // エラー時は元のデータを使用
             enrichedSpecies.push(chunk[index]);
           }
         });
@@ -87,8 +151,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({
           progress: {
             current: enrichedSpecies.length,
-            total: species.length,
-            message: `Wikipedia情報を取得中... (${enrichedSpecies.length}/${species.length})`,
+            total: selectedSpecies.length,
+            message: `Wikipedia情報を取得中... (${enrichedSpecies.length}/${selectedSpecies.length})`,
           },
         });
       }
@@ -99,14 +163,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         species: enrichedSpecies,
         isLoading: false,
         progress: null,
+        showTaxonModal: false, // 完了後にモーダルを閉じる
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      console.error('Error fetching species:', error);
+      console.error('Error enriching with Wikipedia:', error);
       set({
         error: errorMessage,
         isLoading: false,
         progress: null,
+        showTaxonModal: false, // エラー時もモーダルを閉じる
       });
     }
   },
@@ -127,9 +193,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearSpecies: () => {
     set({
       species: [],
+      allSpecies: [],
       currentPolygon: null,
       error: null,
       progress: null,
+      showTaxonModal: false,
     });
   },
 }));

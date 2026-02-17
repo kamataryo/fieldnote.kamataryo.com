@@ -34,6 +34,12 @@
   color: #333;
 }
 
+.species-card__english {
+  font-size: 0.85rem;
+  color: #777;
+  margin: 0 0 0.25rem 0;
+}
+
 .species-card__scientific {
   font-size: 0.9rem;
   font-style: italic;

@@ -5,6 +5,12 @@ export interface INaturalistTaxon {
   preferred_common_name?: string;
   rank: string;
   iconic_taxon_name?: string;
+  ancestor_ids?: number[];
+  ancestors?: Array<{
+    id: number;
+    name: string;
+    rank: string;
+  }>;
 }
 
 export interface INaturalistPhoto {

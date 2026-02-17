@@ -1,10 +1,13 @@
 import type { Species } from '@types/species';
 import type { WikipediaSearchResult, WikipediaPage, WikipediaImageInfo } from '@types/api';
-import { APIClient } from './apiClient';
+import { APIClient, RateLimiter } from './apiClient';
+
+import { RateLimiter } from './apiClient';
 
 export class WikipediaAPI extends APIClient {
   constructor() {
-    super('https://ja.wikipedia.org/w/api.php');
+    // 10回/分に制限
+    super('https://ja.wikipedia.org/w/api.php', new RateLimiter(10, 60000));
   }
 
   async enrichSpeciesWithWikipedia(species: Species): Promise<Species> {

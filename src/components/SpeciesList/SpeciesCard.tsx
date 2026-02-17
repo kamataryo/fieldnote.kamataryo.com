@@ -27,8 +27,11 @@ export function SpeciesCard({ species }: SpeciesCardProps) {
         </div>
       )}
       <div className="species-card__content">
-        <h3 className="species-card__name">{species.commonName || species.scientificName}</h3>
-        {species.commonName && <p className="species-card__scientific">{species.scientificName}</p>}
+        <h3 className="species-card__name">{species.commonName || species.englishName || species.scientificName}</h3>
+        {species.englishName && species.commonName && (
+          <p className="species-card__english">{species.englishName}</p>
+        )}
+        <p className="species-card__scientific">{species.scientificName}</p>
 
         <div className="species-card__meta">
           <span className="badge badge--rank">{rankJa}</span>

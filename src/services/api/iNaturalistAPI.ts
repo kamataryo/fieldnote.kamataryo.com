@@ -6,10 +6,14 @@ import { APIClient, RateLimiter } from './apiClient';
 
 export class INaturalistAPI extends APIClient {
   constructor() {
-    super('https://api.inaturalist.org/v1', new RateLimiter(60, 60000));
+    // 20回/分に制限
+    super('https://api.inaturalist.org/v1', new RateLimiter(20, 60000));
   }
 
-  async getObservationsInPolygon(polygon: Feature<Polygon>): Promise<Species[]> {
+  async getObservationsInPolygon(
+    polygon: Feature<Polygon>,
+    onProgress?: (current: number, total: number, message: string) => void
+  ): Promise<Species[]> {
     console.log('Fetching observations from iNaturalist...');
 
     // ポリゴンからバウンディングボックスを計算
@@ -23,6 +27,7 @@ export class INaturalistAPI extends APIClient {
     let page = 1;
     const perPage = 200;
     let totalResults = 0;
+    let totalPages = 0;
 
     try {
       while (true) {
@@ -44,7 +49,13 @@ export class INaturalistAPI extends APIClient {
         });
 
         totalResults = response.total_results;
+        totalPages = Math.ceil(Math.min(totalResults, 500) / perPage); // 最大500件まで
         allObservations.push(...response.results);
+
+        // 進捗を通知
+        if (onProgress) {
+          onProgress(page, totalPages, `観察記録を取得中... (ページ ${page}/${totalPages})`);
+        }
 
         console.log(
           `Fetched page ${page}: ${response.results.length} observations (total: ${allObservations.length}/${totalResults})`
@@ -64,11 +75,22 @@ export class INaturalistAPI extends APIClient {
 
       console.log(`Total observations fetched: ${allObservations.length}`);
 
+      // 観察記録が0件の場合
+      if (allObservations.length === 0) {
+        if (onProgress) {
+          onProgress(0, 0, 'この範囲に観察記録がありません');
+        }
+        return [];
+      }
+
       // 種ごとに集約
       const speciesMap = this.aggregateBySpecies(allObservations);
 
+      // 分類階層情報を取得（固有のtaxon IDのみ）
+      const speciesWithTaxonomy = await this.enrichWithTaxonomy(Array.from(speciesMap.values()), onProgress);
+
       // ポリゴン内フィルタリング（厳密な判定）
-      const filtered = this.filterInsidePolygon(Array.from(speciesMap.values()), polygon);
+      const filtered = this.filterInsidePolygon(speciesWithTaxonomy, polygon);
 
       console.log(`Unique species after filtering: ${filtered.length}`);
 
@@ -76,6 +98,93 @@ export class INaturalistAPI extends APIClient {
     } catch (error) {
       console.error('Error fetching iNaturalist observations:', error);
       throw error;
+    }
+  }
+
+  /**
+   * 分類階層情報を取得（Taxon詳細API使用）
+   */
+  private async enrichWithTaxonomy(
+    species: Species[],
+    onProgress?: (current: number, total: number, message: string) => void
+  ): Promise<Species[]> {
+    console.log('Fetching taxonomy information...');
+
+    // 10件ずつ並列処理
+    const chunkSize = 10;
+    const enrichedSpecies: Species[] = [];
+
+    for (let i = 0; i < species.length; i += chunkSize) {
+      const chunk = species.slice(i, i + chunkSize);
+      const results = await Promise.allSettled(
+        chunk.map((s) => this.getTaxonDetails(s.id))
+      );
+
+      results.forEach((result, index) => {
+        const s = chunk[index];
+        if (result.status === 'fulfilled' && result.value) {
+          enrichedSpecies.push({
+            ...s,
+            taxonomy: result.value.taxonomy,
+            // 日本語名がある場合は上書き
+            commonName: result.value.japaneseName || s.commonName,
+          });
+        } else {
+          // 失敗した場合は元のデータを使用
+          enrichedSpecies.push(s);
+        }
+      });
+
+      // 進捗を通知
+      if (onProgress) {
+        onProgress(enrichedSpecies.length, species.length, `分類情報を取得中... (${enrichedSpecies.length}/${species.length})`);
+      }
+
+      console.log(`Taxonomy enrichment: ${enrichedSpecies.length}/${species.length}`);
+    }
+
+    return enrichedSpecies;
+  }
+
+  /**
+   * Taxon詳細情報を取得して分類階層と日本語名を抽出
+   */
+  private async getTaxonDetails(
+    taxonId: number
+  ): Promise<{ taxonomy: Species['taxonomy']; japaneseName?: string } | null> {
+    try {
+      const response = await this.requestWithRetry<any>({
+        method: 'GET',
+        url: `/taxa/${taxonId}`,
+        params: {
+          locale: 'ja', // 日本語ロケールを指定
+        },
+      });
+
+      const taxon = response.results?.[0];
+      if (!taxon) return null;
+
+      // ancestorsフィールドから分類階層を抽出
+      const taxonomy: Species['taxonomy'] = {};
+      if (taxon.ancestors) {
+        taxon.ancestors.forEach((ancestor: any) => {
+          const rank = ancestor.rank;
+          if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
+          else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
+          else if (rank === 'class') taxonomy.class = ancestor.name;
+          else if (rank === 'order') taxonomy.order = ancestor.name;
+          else if (rank === 'family') taxonomy.family = ancestor.name;
+          else if (rank === 'genus') taxonomy.genus = ancestor.name;
+        });
+      }
+
+      // 日本語の一般名を取得
+      const japaneseName = taxon.preferred_common_name;
+
+      return { taxonomy, japaneseName };
+    } catch (error) {
+      console.warn(`Failed to get taxon details for ${taxonId}:`, error);
+      return null;
     }
   }
 
@@ -90,11 +199,12 @@ export class INaturalistAPI extends APIClient {
         map.set(taxonId, {
           id: taxonId,
           scientificName: obs.taxon.name,
-          commonName: obs.taxon.preferred_common_name,
+          englishName: obs.taxon.preferred_common_name, // 英名として保存
           rank: obs.taxon.rank,
           observationCount: 0,
           photos: [],
           source: 'iNaturalist',
+          // commonName（和名）とtaxonomyは後で追加
         });
       }
 
