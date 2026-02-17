@@ -1,0 +1,129 @@
+.species-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+}
+
+.species-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.species-card__image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.species-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.species-card__content {
+  padding: 1rem;
+}
+
+.species-card__name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: #333;
+}
+
+.species-card__scientific {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #666;
+  margin: 0 0 0.75rem 0;
+}
+
+.species-card__meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge--rank {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge--obs {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.species-card__description {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #555;
+  margin: 0 0 0.75rem 0;
+}
+
+.species-card__link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: #3bb2d0;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.species-card__link:hover {
+  color: #2a8ca0;
+  text-decoration: underline;
+}
+
+.species-card__attribution {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+@media (prefers-color-scheme: dark) {
+  .species-card {
+    background: #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .species-card__name {
+    color: #eee;
+  }
+
+  .species-card__scientific {
+    color: #aaa;
+  }
+
+  .species-card__description {
+    color: #ccc;
+  }
+
+  .badge--rank {
+    background-color: rgba(25, 118, 210, 0.2);
+    color: #90caf9;
+  }
+
+  .badge--obs {
+    background-color: rgba(123, 31, 162, 0.2);
+    color: #ce93d8;
+  }
+
+  .species-card__attribution {
+    border-top-color: #444;
+  }
+}

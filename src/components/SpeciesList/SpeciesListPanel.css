@@ -1,0 +1,117 @@
+.species-list-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-left: 1px solid #ddd;
+  overflow: hidden;
+}
+
+.species-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.species-list-empty p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.species-list-empty__hint {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.species-list-count {
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555;
+  border-bottom: 1px solid #ddd;
+}
+
+.species-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.species-list-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  color: #666;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f0f0f0;
+  border-top-color: #3bb2d0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.species-list-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .species-list-panel {
+    border-left: none;
+    border-top: 1px solid #ddd;
+  }
+
+  .species-list-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .species-list-panel {
+    background: #1a1a1a;
+    border-left-color: #333;
+  }
+
+  .species-list-empty {
+    color: #aaa;
+  }
+
+  .species-list-empty__hint {
+    color: #666;
+  }
+
+  .species-list-count {
+    background: #2a2a2a;
+    color: #ccc;
+    border-bottom-color: #333;
+  }
+
+  .species-list-loading {
+    color: #aaa;
+  }
+
+  .spinner {
+    border-color: #333;
+    border-top-color: #3bb2d0;
+  }
+}
