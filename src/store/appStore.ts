@@ -92,7 +92,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           allSpecies: [],
           species: [],
           isLoading: false,
-          progress: { current: 0, total: 0, message: 'この範囲に観察記録がありませんでした' },
+          progress: null, // ローディングを終了
+          error: 'この範囲に観察記録がありませんでした',
           // モーダルは開いたまま
         });
         return;
@@ -131,28 +132,26 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const wikipediaAPI = new WikipediaAPI();
-      const chunkSize = 10;
       const enrichedSpecies: Species[] = [];
 
-      for (let i = 0; i < selectedSpecies.length; i += chunkSize) {
-        const chunk = selectedSpecies.slice(i, i + chunkSize);
-        const enrichedChunk = await Promise.allSettled(
-          chunk.map((s) => wikipediaAPI.enrichSpeciesWithWikipedia(s))
-        );
+      // 直列処理（1件ずつ）
+      for (let i = 0; i < selectedSpecies.length; i++) {
+        const species = selectedSpecies[i];
 
-        enrichedChunk.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            enrichedSpecies.push(result.value);
-          } else {
-            enrichedSpecies.push(chunk[index]);
-          }
-        });
+        try {
+          const enriched = await wikipediaAPI.enrichSpeciesWithWikipedia(species);
+          enrichedSpecies.push(enriched);
+        } catch (error) {
+          console.warn(`Failed to enrich species ${species.scientificName}:`, error);
+          enrichedSpecies.push(species); // エラー時は元のデータを使用
+        }
 
+        // 進捗を更新
         set({
           progress: {
-            current: enrichedSpecies.length,
+            current: i + 1,
             total: selectedSpecies.length,
-            message: `Wikipedia情報を取得中... (${enrichedSpecies.length}/${selectedSpecies.length})`,
+            message: `Wikipedia情報を取得中... (${i + 1}/${selectedSpecies.length})`,
           },
         });
       }

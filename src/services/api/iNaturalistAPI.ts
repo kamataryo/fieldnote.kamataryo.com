@@ -128,6 +128,8 @@ export class INaturalistAPI extends APIClient {
             taxonomy: result.value.taxonomy,
             // 日本語名がある場合は上書き
             commonName: result.value.japaneseName || s.commonName,
+            // Wikipedia URLがある場合は設定
+            wikipediaUrl: result.value.wikipediaUrl,
           });
         } else {
           // 失敗した場合は元のデータを使用
@@ -146,12 +148,19 @@ export class INaturalistAPI extends APIClient {
     return enrichedSpecies;
   }
 
+  private taxonCache = new Map<number, { taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string }>();
+
   /**
-   * Taxon詳細情報を取得して分類階層と日本語名を抽出
+   * Taxon詳細情報を取得して分類階層と日本語名を抽出（キャッシュ付き）
    */
   private async getTaxonDetails(
     taxonId: number
-  ): Promise<{ taxonomy: Species['taxonomy']; japaneseName?: string } | null> {
+  ): Promise<{ taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string } | null> {
+    // キャッシュチェック
+    if (this.taxonCache.has(taxonId)) {
+      return this.taxonCache.get(taxonId)!;
+    }
+
     try {
       const response = await this.requestWithRetry<any>({
         method: 'GET',
@@ -181,7 +190,15 @@ export class INaturalistAPI extends APIClient {
       // 日本語の一般名を取得
       const japaneseName = taxon.preferred_common_name;
 
-      return { taxonomy, japaneseName };
+      // Wikipedia URLを取得
+      const wikipediaUrl = taxon.wikipedia_url;
+
+      const result = { taxonomy, japaneseName, wikipediaUrl };
+
+      // キャッシュに保存
+      this.taxonCache.set(taxonId, result);
+
+      return result;
     } catch (error) {
       console.warn(`Failed to get taxon details for ${taxonId}:`, error);
       return null;

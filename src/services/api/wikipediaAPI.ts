@@ -2,8 +2,6 @@ import type { Species } from '@types/species';
 import type { WikipediaSearchResult, WikipediaPage, WikipediaImageInfo } from '@types/api';
 import { APIClient, RateLimiter } from './apiClient';
 
-import { RateLimiter } from './apiClient';
-
 export class WikipediaAPI extends APIClient {
   constructor() {
     // 10回/分に制限
@@ -12,29 +10,49 @@ export class WikipediaAPI extends APIClient {
 
   async enrichSpeciesWithWikipedia(species: Species): Promise<Species> {
     try {
-      // 1. 学名で記事検索（優先）、見つからなければ和名で検索
-      let pageInfo = await this.searchPage(species.scientificName);
+      let pageTitle: string | null = null;
 
-      if (!pageInfo && species.commonName) {
-        console.log(`No page found for scientific name: ${species.scientificName}, trying common name...`);
-        pageInfo = await this.searchPage(species.commonName);
+      // 1. iNaturalistからのWikipedia URLを優先使用
+      if (species.wikipediaUrl) {
+        pageTitle = this.extractPageTitleFromUrl(species.wikipediaUrl);
+        console.log(`Using Wikipedia URL from iNaturalist: ${species.wikipediaUrl}`);
       }
 
-      if (!pageInfo) {
-        console.log(`No Wikipedia page found for: ${species.scientificName}`);
+      // 2. URLがない場合のみ検索
+      if (!pageTitle) {
+        let pageInfo = await this.searchPage(species.scientificName);
+
+        if (!pageInfo && species.commonName) {
+          console.log(`No page found for scientific name: ${species.scientificName}, trying common name...`);
+          pageInfo = await this.searchPage(species.commonName);
+        }
+
+        if (!pageInfo) {
+          console.log(`No Wikipedia page found for: ${species.scientificName}`);
+          return species;
+        }
+
+        pageTitle = pageInfo.title;
+      }
+
+      // 3. 1回のリクエストで記事内容と画像一覧を取得
+      const pageData = await this.getPageData(pageTitle);
+
+      if (!pageData) {
+        console.log(`Failed to get page data for: ${pageTitle}`);
         return species;
       }
 
-      // 2. 記事の導入部取得
-      const extract = await this.getExtract(pageInfo.pageid);
-
-      // 3. メイン画像取得
-      const image = await this.getMainImage(pageInfo.pageid);
+      // 4. 画像がある場合のみ詳細情報を取得
+      let image = null;
+      if (pageData.images && pageData.images.length > 0) {
+        image = await this.getImageInfo(pageData.images[0].title);
+      }
 
       return {
         ...species,
-        wikipediaUrl: `https://ja.wikipedia.org/?curid=${pageInfo.pageid}`,
-        description: extract,
+        wikipediaUrl: species.wikipediaUrl || `https://ja.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
+        description: pageData.extract,
         wikipediaImage: image
           ? {
               url: image.url,
@@ -50,7 +68,55 @@ export class WikipediaAPI extends APIClient {
     }
   }
 
-  private async searchPage(searchTerm: string): Promise<WikipediaSearchResult | null> {
+  /**
+   * Wikipedia URLからページタイトルを抽出
+   */
+  private extractPageTitleFromUrl(url: string): string | null {
+    try {
+      const match = url.match(/\/wiki\/(.+)$/);
+      if (match) {
+        return decodeURIComponent(match[1]);
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * 1回のリクエストでページの内容と画像一覧を取得
+   */
+  private async getPageData(title: string): Promise<{ extract: string; images: any[] } | null> {
+    try {
+      const response = await this.request<any>({
+        method: 'GET',
+        url: '',
+        params: {
+          action: 'query',
+          format: 'json',
+          prop: 'extracts|images',
+          exintro: true,
+          explaintext: true,
+          titles: title,
+          origin: '*',
+        },
+      });
+
+      const pages = response.query?.pages;
+      if (!pages) return null;
+
+      const page = Object.values(pages)[0] as any;
+      return {
+        extract: page.extract || '',
+        images: page.images || [],
+      };
+    } catch (error) {
+      console.error('Wikipedia page data error:', error);
+      return null;
+    }
+  }
+
+  private async searchPage(searchTerm: string): Promise<{ title: string } | null> {
     try {
       const response = await this.request<any>({
         method: 'GET',
@@ -66,62 +132,9 @@ export class WikipediaAPI extends APIClient {
       });
 
       const results = response.query?.search;
-      return results && results.length > 0 ? results[0] : null;
+      return results && results.length > 0 ? { title: results[0].title } : null;
     } catch (error) {
       console.error('Wikipedia search error:', error);
-      return null;
-    }
-  }
-
-  private async getExtract(pageid: number): Promise<string> {
-    try {
-      const response = await this.request<any>({
-        method: 'GET',
-        url: '',
-        params: {
-          action: 'query',
-          format: 'json',
-          prop: 'extracts',
-          exintro: true,
-          explaintext: true,
-          pageids: pageid,
-          origin: '*',
-        },
-      });
-
-      const page = response.query?.pages?.[pageid];
-      return page?.extract || '';
-    } catch (error) {
-      console.error('Wikipedia extract error:', error);
-      return '';
-    }
-  }
-
-  private async getMainImage(pageid: number): Promise<WikipediaImageInfo | null> {
-    try {
-      // 1. ページの画像一覧取得
-      const imagesResponse = await this.request<any>({
-        method: 'GET',
-        url: '',
-        params: {
-          action: 'query',
-          format: 'json',
-          prop: 'images',
-          pageids: pageid,
-          origin: '*',
-        },
-      });
-
-      const page = imagesResponse.query?.pages?.[pageid];
-      if (!page?.images || page.images.length === 0) {
-        return null;
-      }
-
-      // 最初の画像の詳細情報取得
-      const imageTitle = page.images[0].title;
-      return await this.getImageInfo(imageTitle);
-    } catch (error) {
-      console.error('Wikipedia image error:', error);
       return null;
     }
   }
