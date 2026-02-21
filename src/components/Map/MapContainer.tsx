@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { Feature, Polygon } from '@types/map';
@@ -15,6 +15,10 @@ import './MapContainer.css';
 (MapboxDraw as any).constants.classes.CONTROL_BASE = 'maplibregl-ctrl';
 (MapboxDraw as any).constants.classes.CONTROL_PREFIX = 'maplibregl-ctrl-';
 (MapboxDraw as any).constants.classes.CONTROL_GROUP = 'maplibregl-ctrl-group';
+
+export interface MapContainerHandle {
+  deletePolygon: () => void;
+}
 
 interface MapContainerProps {
   onPolygonCreated?: (polygon: Feature<Polygon>) => void;
@@ -35,11 +39,25 @@ function speciesToGeoJSON(species: Species[]): GeoJSON.FeatureCollection {
   };
 }
 
-export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted }: MapContainerProps) {
+export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted }, ref) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const hasCompletedPolygonRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    deletePolygon: () => {
+      const draw = drawRef.current;
+      if (!draw) return;
+      const hadCompleted = hasCompletedPolygonRef.current;
+      draw.deleteAll();
+      draw.changeMode('draw_polygon');
+      hasCompletedPolygonRef.current = false;
+      if (hadCompleted) {
+        onPolygonDeleted?.();
+      }
+    },
+  }), [onPolygonDeleted]);
 
   const { species, setSelectedSpeciesId } = useAppStore();
   const speciesRef = useRef(species);
@@ -198,4 +216,4 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
   }, [onPolygonCreated, onPolygonUpdated, onPolygonDeleted]);
 
   return <div ref={mapContainerRef} className="map-container" />;
-}
+});

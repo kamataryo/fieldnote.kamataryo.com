@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { MapContainer } from '@components/Map/MapContainer'
+import type { MapContainerHandle } from '@components/Map/MapContainer'
 import { SpeciesListPanel } from '@components/SpeciesList/SpeciesListPanel'
 import { TaxonSelectionModal } from '@components/TaxonSelectionModal/TaxonSelectionModal'
 import type { Feature, Polygon } from '@types/map'
@@ -8,6 +9,8 @@ import { buildTaxonomyTree, getSelectedSpeciesIds } from '@services/taxonomyUtil
 import './styles/App.css'
 
 function App() {
+  const mapRef = useRef<MapContainerHandle>(null);
+
   const {
     setPolygon,
     fetchInitialSpecies,
@@ -15,7 +18,6 @@ function App() {
     clearSpecies,
     setShowTaxonModal,
     allSpecies,
-    species,
     isLoading,
     error,
     progress,
@@ -50,15 +52,17 @@ function App() {
 
   const handlePolygonDeleted = useCallback(() => {
     console.log('App: Polygon deleted')
-    clearSpecies()
-  }, [clearSpecies])
+    // ポリゴンを削除しても図鑑・POI は残す（clearSpecies は呼ばない）
+  }, [])
 
   const handleTaxonSelectionConfirm = useCallback(
     async (selection: Record<string, boolean>) => {
       console.log('Taxon selection confirmed:', selection)
       const selectedIds = getSelectedSpeciesIds(taxonomyTree, selection)
       console.log(`Selected ${selectedIds.size} species`)
-      await enrichWithWikipedia(selectedIds) // Step 2: Wikipedia取得
+      await enrichWithWikipedia(selectedIds)
+      // 図鑑確定後にポリゴンを削除
+      mapRef.current?.deletePolygon()
     },
     [taxonomyTree, enrichWithWikipedia]
   )
@@ -78,6 +82,7 @@ function App() {
       </header>
       <main className="app-main">
         <MapContainer
+          ref={mapRef}
           onPolygonCreated={handlePolygonCreated}
           onPolygonUpdated={handlePolygonUpdated}
           onPolygonDeleted={handlePolygonDeleted}
