@@ -21,12 +21,16 @@ interface AppState {
   // モーダル状態
   showTaxonModal: boolean;
 
+  // 地図で選択された種
+  selectedSpeciesId: number | null;
+
   // アクション
   setPolygon: (polygon: Feature<Polygon>) => void;
   fetchInitialSpecies: (polygon: Feature<Polygon>) => Promise<void>;
   enrichWithWikipedia: (selectedSpeciesIds: Set<number>) => void;
   clearSpecies: () => void;
   setShowTaxonModal: (show: boolean) => void;
+  setSelectedSpeciesId: (id: number | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -38,6 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
   progress: null,
   showTaxonModal: false,
+  selectedSpeciesId: null,
 
   // ポリゴン設定
   setPolygon: (polygon) => {
@@ -119,6 +124,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       error: null,
       progress: null,
       showTaxonModal: false,
+      selectedSpeciesId: null,
     });
   },
+
+  setSelectedSpeciesId: (id) => set({ selectedSpeciesId: id }),
 }));

@@ -20,7 +20,7 @@ export function SpeciesCard({ species }: SpeciesCardProps) {
   const rankJa = RANK_TRANSLATIONS[species.rank] || species.rank;
 
   return (
-    <div className="species-card">
+    <div id={`species-card-${species.id}`} className="species-card">
       {imageUrl && (
         <div className="species-card__image">
           <img src={imageUrl} alt={species.commonName || species.scientificName} loading="lazy" />

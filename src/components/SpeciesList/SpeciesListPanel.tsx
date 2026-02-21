@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppStore } from '@store/appStore';
 import { SpeciesCard } from './SpeciesCard';
 import { ExportPanel } from '@components/Export/ExportPanel';
@@ -7,7 +7,15 @@ import type { Species } from '@types/species';
 import './SpeciesListPanel.css';
 
 export function SpeciesListPanel() {
-  const { species } = useAppStore();
+  const { species, selectedSpeciesId, setSelectedSpeciesId } = useAppStore();
+
+  useEffect(() => {
+    if (!selectedSpeciesId) return;
+    document
+      .getElementById(`species-card-${selectedSpeciesId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setSelectedSpeciesId(null);
+  }, [selectedSpeciesId, setSelectedSpeciesId]);
 
   const taxonomyTree = useMemo(() => buildTaxonomyTree(species), [species]);
 

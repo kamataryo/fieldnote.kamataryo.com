@@ -23,5 +23,6 @@ export interface Species {
     genus?: string;
   };
   wikipediaUrl?: string;
+  location?: [number, number]; // [longitude, latitude]
 }
 

@@ -210,6 +210,7 @@ export class INaturalistAPI extends APIClient {
           observationCount: 0,
           photos: [],
           source: 'iNaturalist',
+          location: obs.geojson?.coordinates as [number, number] | undefined,
           // commonName（和名）とtaxonomyは後で追加
         });
 
