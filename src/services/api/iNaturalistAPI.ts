@@ -102,39 +102,70 @@ export class INaturalistAPI extends APIClient {
   }
 
   /**
-   * 分類階層情報を取得（Taxon詳細API使用）
+   * 分類階層情報を取得（Taxon一括取得API使用）
+   * /taxa?id=1,2,3,... で最大30件ずつ一括取得し、個別リクエストを大幅削減する
    */
   private async enrichWithTaxonomy(
     species: Species[],
     onProgress?: (current: number, total: number, message: string) => void
   ): Promise<Species[]> {
-    console.log('Fetching taxonomy information...');
+    console.log('Fetching taxonomy information (bulk)...');
 
-    // 10件ずつ並列処理
-    const chunkSize = 10;
+    // 30件ずつ一括取得（iNaturalist API の実用的な上限）
+    const chunkSize = 30;
     const enrichedSpecies: Species[] = [];
 
     for (let i = 0; i < species.length; i += chunkSize) {
       const chunk = species.slice(i, i + chunkSize);
-      const results = await Promise.allSettled(
-        chunk.map((s) => this.getTaxonDetails(s.id))
-      );
 
-      results.forEach((result, index) => {
-        const s = chunk[index];
-        if (result.status === 'fulfilled' && result.value) {
-          enrichedSpecies.push({
-            ...s,
-            taxonomy: result.value.taxonomy,
-            // 日本語名がある場合は上書き
-            commonName: result.value.japaneseName || s.commonName,
-            // Wikipedia URLがある場合は設定
-            wikipediaUrl: result.value.wikipediaUrl,
+      // キャッシュにないものだけAPIリクエスト
+      const uncachedIds = chunk.filter((s) => !this.taxonCache.has(s.id)).map((s) => s.id);
+
+      if (uncachedIds.length > 0) {
+        try {
+          const response = await this.requestWithRetry<any>({
+            method: 'GET',
+            url: '/taxa',
+            params: {
+              id: uncachedIds.join(','),
+              locale: 'ja',
+            },
           });
-        } else {
-          // 失敗した場合は元のデータを使用
-          enrichedSpecies.push(s);
+
+          // レスポンスをキャッシュに格納
+          (response.results || []).forEach((taxon: any) => {
+            const taxonomy: Species['taxonomy'] = {};
+            if (taxon.ancestors) {
+              taxon.ancestors.forEach((ancestor: any) => {
+                const rank = ancestor.rank;
+                if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
+                else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
+                else if (rank === 'class') taxonomy.class = ancestor.name;
+                else if (rank === 'order') taxonomy.order = ancestor.name;
+                else if (rank === 'family') taxonomy.family = ancestor.name;
+                else if (rank === 'genus') taxonomy.genus = ancestor.name;
+              });
+            }
+            this.taxonCache.set(taxon.id, {
+              taxonomy,
+              japaneseName: taxon.preferred_common_name,
+              wikipediaUrl: taxon.wikipedia_url,
+            });
+          });
+        } catch (error) {
+          console.warn(`Failed to get bulk taxon details for ids [${uncachedIds.join(',')}]:`, error);
         }
+      }
+
+      // キャッシュから各 species を更新
+      chunk.forEach((s) => {
+        const cached = this.taxonCache.get(s.id);
+        enrichedSpecies.push({
+          ...s,
+          taxonomy: cached?.taxonomy,
+          commonName: cached?.japaneseName || s.commonName,
+          wikipediaUrl: cached?.wikipediaUrl,
+        });
       });
 
       // 進捗を通知
@@ -149,61 +180,6 @@ export class INaturalistAPI extends APIClient {
   }
 
   private taxonCache = new Map<number, { taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string }>();
-
-  /**
-   * Taxon詳細情報を取得して分類階層と日本語名を抽出（キャッシュ付き）
-   */
-  private async getTaxonDetails(
-    taxonId: number
-  ): Promise<{ taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string } | null> {
-    // キャッシュチェック
-    if (this.taxonCache.has(taxonId)) {
-      return this.taxonCache.get(taxonId)!;
-    }
-
-    try {
-      const response = await this.requestWithRetry<any>({
-        method: 'GET',
-        url: `/taxa/${taxonId}`,
-        params: {
-          locale: 'ja', // 日本語ロケールを指定
-        },
-      });
-
-      const taxon = response.results?.[0];
-      if (!taxon) return null;
-
-      // ancestorsフィールドから分類階層を抽出
-      const taxonomy: Species['taxonomy'] = {};
-      if (taxon.ancestors) {
-        taxon.ancestors.forEach((ancestor: any) => {
-          const rank = ancestor.rank;
-          if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
-          else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
-          else if (rank === 'class') taxonomy.class = ancestor.name;
-          else if (rank === 'order') taxonomy.order = ancestor.name;
-          else if (rank === 'family') taxonomy.family = ancestor.name;
-          else if (rank === 'genus') taxonomy.genus = ancestor.name;
-        });
-      }
-
-      // 日本語の一般名を取得
-      const japaneseName = taxon.preferred_common_name;
-
-      // Wikipedia URLを取得
-      const wikipediaUrl = taxon.wikipedia_url;
-
-      const result = { taxonomy, japaneseName, wikipediaUrl };
-
-      // キャッシュに保存
-      this.taxonCache.set(taxonId, result);
-
-      return result;
-    } catch (error) {
-      console.warn(`Failed to get taxon details for ${taxonId}:`, error);
-      return null;
-    }
-  }
 
   private aggregateBySpecies(observations: INaturalistObservation[]): Map<number, Species> {
     const map = new Map<number, Species>();

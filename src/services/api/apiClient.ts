@@ -4,35 +4,25 @@ export class RateLimiter {
   private queue: number[] = [];
   private limit: number;
   private window: number;
-  private minInterval: number; // 最小リクエスト間隔（ミリ秒）
 
   constructor(limit: number = 60, windowMs: number = 60000) {
     this.limit = limit;
     this.window = windowMs;
-    this.minInterval = windowMs / limit; // 直列アクセスの間隔
   }
 
   async waitIfNeeded(): Promise<void> {
     const now = Date.now();
     this.queue = this.queue.filter((time) => now - time < this.window);
 
-    // 直列アクセス：前回のリクエストから最小間隔待つ
-    if (this.queue.length > 0) {
-      const lastRequest = this.queue[this.queue.length - 1];
-      const timeSinceLastRequest = now - lastRequest;
-
-      if (timeSinceLastRequest < this.minInterval) {
-        const waitTime = this.minInterval - timeSinceLastRequest;
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      }
-    }
-
-    // レート制限チェック
+    // ウィンドウ内のリクエスト数が上限に達している場合のみ待機
+    // 上限未満であれば並列リクエストを即座に通過させる（minInterval 強制なし）
     if (this.queue.length >= this.limit) {
       const oldestRequest = this.queue[0];
       const waitTime = this.window - (now - oldestRequest) + 100;
       console.log(`Rate limit reached. Waiting ${waitTime}ms...`);
       await new Promise((resolve) => setTimeout(resolve, waitTime));
+      // 待機後に再チェック（待機中に他のリクエストが通過している可能性があるため）
+      return this.waitIfNeeded();
     }
 
     this.queue.push(Date.now());

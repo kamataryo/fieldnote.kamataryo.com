@@ -118,7 +118,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Step 2: 選択された種のみWikipedia情報を取得
+  // Step 2: 選択された種のみWikipedia情報を取得（バッチ処理）
   enrichWithWikipedia: async (selectedSpeciesIds) => {
     const { allSpecies } = get();
     const selectedSpecies = allSpecies.filter((s) => selectedSpeciesIds.has(s.id));
@@ -132,29 +132,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const wikipediaAPI = new WikipediaAPI();
-      const enrichedSpecies: Species[] = [];
 
-      // 直列処理（1件ずつ）
-      for (let i = 0; i < selectedSpecies.length; i++) {
-        const species = selectedSpecies[i];
-
-        try {
-          const enriched = await wikipediaAPI.enrichSpeciesWithWikipedia(species);
-          enrichedSpecies.push(enriched);
-        } catch (error) {
-          console.warn(`Failed to enrich species ${species.scientificName}:`, error);
-          enrichedSpecies.push(species); // エラー時は元のデータを使用
+      // バッチ処理（有URL種は複数を1リクエストでまとめて取得、無URL種は並列チャンク処理）
+      const enrichedSpecies = await wikipediaAPI.enrichBatch(
+        selectedSpecies,
+        (current, total, message) => {
+          set({ progress: { current, total, message } });
         }
-
-        // 進捗を更新
-        set({
-          progress: {
-            current: i + 1,
-            total: selectedSpecies.length,
-            message: `Wikipedia情報を取得中... (${i + 1}/${selectedSpecies.length})`,
-          },
-        });
-      }
+      );
 
       console.log(`Wikipedia enrichment completed: ${enrichedSpecies.length} species`);
 
