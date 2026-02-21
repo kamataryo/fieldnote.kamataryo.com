@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "WebSearch",
+      "Bash(xargs:*)",
+      "WebFetch(domain:api.inaturalist.org)",
+      "WebFetch(domain:techdocs.gbif.org)",
+      "Bash(pnpm create:*)",
+      "Bash(pnpm install:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
