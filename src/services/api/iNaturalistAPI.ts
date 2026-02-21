@@ -102,23 +102,22 @@ export class INaturalistAPI extends APIClient {
   }
 
   /**
-   * 分類階層情報を取得（Taxon一括取得API使用）
-   * /taxa?id=1,2,3,... で最大30件ずつ一括取得し、個別リクエストを大幅削減する
+   * 分類階層情報を取得（2段階一括取得方式）
+   *
+   * Step A: /taxa?id=speciesIds → commonName, wikipediaUrl を取得（ancestors は含まれない）
+   * Step B: /taxa?id=ancestorIds → 祖先の {name, rank} を一括取得（ancestor_ids は観察データから取得済み）
+   * Step C: 各種の ancestor_ids を Step B のルックアップで解決して taxonomy を構築
    */
   private async enrichWithTaxonomy(
     species: Species[],
     onProgress?: (current: number, total: number, message: string) => void
   ): Promise<Species[]> {
-    console.log('Fetching taxonomy information (bulk)...');
+    console.log('Fetching taxonomy information (2-step bulk)...');
 
-    // 30件ずつ一括取得（iNaturalist API の実用的な上限）
+    // === Step A: Taxon 一括取得（commonName, wikipediaUrl 目的）===
     const chunkSize = 30;
-    const enrichedSpecies: Species[] = [];
-
     for (let i = 0; i < species.length; i += chunkSize) {
       const chunk = species.slice(i, i + chunkSize);
-
-      // キャッシュにないものだけAPIリクエスト
       const uncachedIds = chunk.filter((s) => !this.taxonCache.has(s.id)).map((s) => s.id);
 
       if (uncachedIds.length > 0) {
@@ -126,28 +125,12 @@ export class INaturalistAPI extends APIClient {
           const response = await this.requestWithRetry<any>({
             method: 'GET',
             url: '/taxa',
-            params: {
-              id: uncachedIds.join(','),
-              locale: 'ja',
-            },
+            params: { id: uncachedIds.join(','), locale: 'ja' },
           });
 
-          // レスポンスをキャッシュに格納
           (response.results || []).forEach((taxon: any) => {
-            const taxonomy: Species['taxonomy'] = {};
-            if (taxon.ancestors) {
-              taxon.ancestors.forEach((ancestor: any) => {
-                const rank = ancestor.rank;
-                if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
-                else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
-                else if (rank === 'class') taxonomy.class = ancestor.name;
-                else if (rank === 'order') taxonomy.order = ancestor.name;
-                else if (rank === 'family') taxonomy.family = ancestor.name;
-                else if (rank === 'genus') taxonomy.genus = ancestor.name;
-              });
-            }
             this.taxonCache.set(taxon.id, {
-              taxonomy,
+              taxonomy: {}, // Step C で後から設定
               japaneseName: taxon.preferred_common_name,
               wikipediaUrl: taxon.wikipedia_url,
             });
@@ -157,29 +140,59 @@ export class INaturalistAPI extends APIClient {
         }
       }
 
-      // キャッシュから各 species を更新
-      chunk.forEach((s) => {
-        const cached = this.taxonCache.get(s.id);
-        enrichedSpecies.push({
-          ...s,
-          taxonomy: cached?.taxonomy,
-          commonName: cached?.japaneseName || s.commonName,
-          wikipediaUrl: cached?.wikipediaUrl,
-        });
-      });
-
-      // 進捗を通知
       if (onProgress) {
-        onProgress(enrichedSpecies.length, species.length, `分類情報を取得中... (${enrichedSpecies.length}/${species.length})`);
+        const fetched = Math.min(i + chunkSize, species.length);
+        onProgress(fetched, species.length, `Taxon情報を取得中... (${fetched}/${species.length})`);
       }
-
-      console.log(`Taxonomy enrichment: ${enrichedSpecies.length}/${species.length}`);
     }
 
+    // === Step B: 全種の ancestor_ids を収集して祖先の {name, rank} を一括取得 ===
+    const allAncestorIds = new Set<number>();
+    species.forEach((s) => {
+      const ids = this.taxonAncestorIds.get(s.id) || [];
+      ids.forEach((id) => allAncestorIds.add(id));
+    });
+
+    if (onProgress) {
+      onProgress(species.length, species.length, '分類階層を解決中...');
+    }
+
+    const ancestorLookup = await this.fetchAncestorDetails([...allAncestorIds]);
+
+    // === Step C: 各種の taxonomy を ancestor_ids + ルックアップで構築 ===
+    const enrichedSpecies: Species[] = species.map((s) => {
+      const cached = this.taxonCache.get(s.id);
+      const ancestorIds = this.taxonAncestorIds.get(s.id) || [];
+
+      const taxonomy: Species['taxonomy'] = {};
+      ancestorIds.forEach((id) => {
+        const ancestor = ancestorLookup.get(id);
+        if (!ancestor) return;
+        const rank = ancestor.rank;
+        if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
+        else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
+        else if (rank === 'class') taxonomy.class = ancestor.name;
+        else if (rank === 'order') taxonomy.order = ancestor.name;
+        else if (rank === 'family') taxonomy.family = ancestor.name;
+        else if (rank === 'genus') taxonomy.genus = ancestor.name;
+      });
+
+      return {
+        ...s,
+        taxonomy,
+        commonName: cached?.japaneseName || s.commonName,
+        wikipediaUrl: cached?.wikipediaUrl,
+      };
+    });
+
+    console.log(`Taxonomy enrichment complete: ${enrichedSpecies.length} species`);
     return enrichedSpecies;
   }
 
   private taxonCache = new Map<number, { taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string }>();
+
+  // 各 taxon の祖先 ID を保持（aggregateBySpecies で観察データから取得）
+  private taxonAncestorIds = new Map<number, number[]>();
 
   private aggregateBySpecies(observations: INaturalistObservation[]): Map<number, Species> {
     const map = new Map<number, Species>();
@@ -199,6 +212,11 @@ export class INaturalistAPI extends APIClient {
           source: 'iNaturalist',
           // commonName（和名）とtaxonomyは後で追加
         });
+
+        // 観察データから ancestor_ids を保存
+        if (obs.taxon.ancestor_ids && obs.taxon.ancestor_ids.length > 0) {
+          this.taxonAncestorIds.set(taxonId, obs.taxon.ancestor_ids);
+        }
       }
 
       const species = map.get(taxonId)!;
@@ -218,6 +236,36 @@ export class INaturalistAPI extends APIClient {
     }
 
     return map;
+  }
+
+  /**
+   * 祖先 taxon の ID リストから {name, rank} を一括取得するルックアップを構築する。
+   * 祖先は界・門・綱など高位分類群で多くの種が共有するため、
+   * 全種まとめても固有 ID 数が少なく 1〜2 リクエストで済む。
+   */
+  private async fetchAncestorDetails(ancestorIds: number[]): Promise<Map<number, { name: string; rank: string }>> {
+    const lookup = new Map<number, { name: string; rank: string }>();
+    if (ancestorIds.length === 0) return lookup;
+
+    const chunkSize = 100;
+    for (let i = 0; i < ancestorIds.length; i += chunkSize) {
+      const chunk = ancestorIds.slice(i, i + chunkSize);
+      try {
+        const response = await this.requestWithRetry<any>({
+          method: 'GET',
+          url: '/taxa',
+          params: { id: chunk.join(','), per_page: chunkSize },
+        });
+        (response.results || []).forEach((t: any) => {
+          lookup.set(t.id, { name: t.name, rank: t.rank });
+        });
+      } catch (error) {
+        console.warn(`Failed to fetch ancestor details for ids [${chunk.join(',')}]:`, error);
+      }
+    }
+
+    console.log(`Ancestor lookup built: ${lookup.size} entries`);
+    return lookup;
   }
 
   private filterInsidePolygon(species: Species[], polygon: Feature<Polygon>): Species[] {
