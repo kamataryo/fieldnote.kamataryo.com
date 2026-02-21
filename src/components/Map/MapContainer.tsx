@@ -24,6 +24,9 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
+  // 完成済みポリゴンが存在するかを追跡するフラグ
+  // （draw.deleteAll() は silent=true でイベントを発火しないため、手動で管理する）
+  const hasCompletedPolygonRef = useRef(false);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -56,6 +59,25 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
 
     drawRef.current = draw;
     map.addControl(draw as any, 'top-left');
+
+    // トラッシュボタンの乗っ取り
+    // MapboxDraw 既定の trash 動作:
+    //   - draw_polygon 中 → 描画中の未完成ポリゴンのみ消去して simple_select へ（完成済みは残る）
+    //   - simple_select 中 → 選択中のフィーチャーのみ消去（未選択なら何もしない）
+    // → キャプチャフェーズで stopImmediatePropagation() し、「完成済みを即時全削除して draw_polygon に戻る」に上書き
+    const trashButton = map.getContainer().querySelector('.mapbox-gl-draw_trash') as HTMLElement | null;
+    trashButton?.addEventListener('click', (e) => {
+      e.stopImmediatePropagation();
+
+      const hadCompleted = hasCompletedPolygonRef.current;
+      draw.deleteAll();
+      draw.changeMode('draw_polygon');
+      hasCompletedPolygonRef.current = false;
+
+      if (hadCompleted) {
+        onPolygonDeleted?.();
+      }
+    }, true);
 
     // デフォルトでポリゴン描画モードを有効化
     map.once('load', () => {
@@ -90,28 +112,29 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
     // Drawイベントハンドリング
     map.on('draw.create', (e: any) => {
       const feature = e.features[0] as Feature<Polygon>;
+      const newId = feature.id as string;
 
-      // 1つのポリゴンのみ保持（新しいポリゴン作成時に古いものを削除）
-      const allFeatures = draw.getAll();
-      if (allFeatures.features.length > 1) {
-        // 最初のフィーチャー以外を削除
-        allFeatures.features.slice(1).forEach((f) => {
-          draw.delete(f.id as string);
-        });
-      }
+      // 新しく完成したポリゴン以外（以前の完成済みポリゴン）を削除する。
+      // draw.getAll() は store 内の全フィーチャーを返す。
+      // 削除は API 経由なので silent=true のため draw.delete イベントは発火しない。
+      draw.getAll().features
+        .filter((f) => f.id !== newId)
+        .forEach((f) => draw.delete(f.id as string));
 
-      console.log('Polygon created:', feature);
+      hasCompletedPolygonRef.current = true;
       onPolygonCreated?.(feature);
     });
 
     map.on('draw.update', (e: any) => {
       const feature = e.features[0] as Feature<Polygon>;
-      console.log('Polygon updated:', feature);
       onPolygonUpdated?.(feature);
     });
 
+    // draw.delete イベントは API 経由の削除では発火しない（silent=true）。
+    // ただし、キーボードの Delete/Backspace キーで選択削除した場合など、
+    // 内部処理が silent=false で走るケースに備えて残しておく。
     map.on('draw.delete', () => {
-      console.log('Polygon deleted');
+      hasCompletedPolygonRef.current = false;
       onPolygonDeleted?.();
     });
 
