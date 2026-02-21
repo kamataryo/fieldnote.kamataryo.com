@@ -51,7 +51,7 @@ export class PDFExporter {
     // 画像をDataURLに変換（並列処理）
     const speciesWithImages = await Promise.all(
       species.map(async (s) => {
-        const imageUrl = s.photos[0]?.url || s.wikipediaImage?.url;
+        const imageUrl = s.photos[0]?.url;
         let dataUrl: string | null = null;
 
         if (imageUrl) {
@@ -88,7 +88,7 @@ export class PDFExporter {
 
         // フッター
         {
-          text: '\n\nこのデータは iNaturalist と Wikipedia から取得されました。',
+          text: '\n\nこのデータは iNaturalist から取得されました。',
           style: 'footer',
         },
         {
@@ -120,11 +120,6 @@ export class PDFExporter {
           fontSize: 10,
           margin: [0, 5, 0, 5],
         },
-        description: {
-          fontSize: 10,
-          margin: [0, 10, 0, 0],
-          lineHeight: 1.4,
-        },
         attribution: {
           fontSize: 8,
           color: '#999999',
@@ -149,7 +144,7 @@ export class PDFExporter {
     index: number
   ): any[] {
     const rankJa = RANK_TRANSLATIONS[species.rank] || species.rank;
-    const attribution = species.photos[0]?.attribution || species.wikipediaImage?.attribution;
+    const attribution = species.photos[0]?.attribution;
 
     const sections: any[] = [
       {
@@ -181,14 +176,6 @@ export class PDFExporter {
           style: 'attribution',
         });
       }
-    }
-
-    // 説明追加
-    if (species.description) {
-      sections.push({
-        text: species.description,
-        style: 'description',
-      });
     }
 
     return sections;

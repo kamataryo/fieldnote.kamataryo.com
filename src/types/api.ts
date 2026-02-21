@@ -37,25 +37,3 @@ export interface INaturalistResponse {
   results: INaturalistObservation[];
 }
 
-// Wikipedia API型定義
-export interface WikipediaSearchResult {
-  pageid: number;
-  title: string;
-  snippet: string;
-}
-
-export interface WikipediaPage {
-  pageid: number;
-  title: string;
-  extract?: string;
-}
-
-export interface WikipediaImageInfo {
-  url: string;
-  descriptionurl: string;
-  extmetadata?: {
-    License?: { value: string };
-    Artist?: { value: string };
-    Attribution?: { value: string };
-  };
-}

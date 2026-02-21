@@ -16,7 +16,7 @@ const RANK_TRANSLATIONS: Record<string, string> = {
 };
 
 export function SpeciesCard({ species }: SpeciesCardProps) {
-  const imageUrl = species.photos[0]?.url || species.wikipediaImage?.url;
+  const imageUrl = species.photos[0]?.url;
   const rankJa = RANK_TRANSLATIONS[species.rank] || species.rank;
 
   return (
@@ -38,14 +38,6 @@ export function SpeciesCard({ species }: SpeciesCardProps) {
           <span className="badge badge--obs">観察数: {species.observationCount}</span>
         </div>
 
-        {species.description && (
-          <p className="species-card__description">
-            {species.description.length > 150
-              ? species.description.substring(0, 150) + '...'
-              : species.description}
-          </p>
-        )}
-
         {species.wikipediaUrl && (
           <a
             href={species.wikipediaUrl}
@@ -57,12 +49,9 @@ export function SpeciesCard({ species }: SpeciesCardProps) {
           </a>
         )}
 
-        {imageUrl && (
+        {imageUrl && species.photos[0] && (
           <div className="species-card__attribution">
-            {species.photos[0] && <span>出典: {species.photos[0].attribution}</span>}
-            {species.wikipediaImage && !species.photos[0] && (
-              <span>出典: {species.wikipediaImage.attribution}</span>
-            )}
+            <span>出典: {species.photos[0].attribution}</span>
           </div>
         )}
       </div>

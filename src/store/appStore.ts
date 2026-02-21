@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { Feature, Polygon } from '@types/map';
 import type { Species, SpeciesFilters, SortBy } from '@types/species';
 import { INaturalistAPI } from '@services/api/iNaturalistAPI';
-import { WikipediaAPI } from '@services/api/wikipediaAPI';
 
 interface AppState {
   // 地図状態
@@ -29,7 +28,7 @@ interface AppState {
   // アクション
   setPolygon: (polygon: Feature<Polygon>) => void;
   fetchInitialSpecies: (polygon: Feature<Polygon>) => Promise<void>; // Step 1: iNaturalistのみ
-  enrichWithWikipedia: (selectedSpeciesIds: Set<number>) => Promise<void>; // Step 2: Wikipedia
+  enrichWithWikipedia: (selectedSpeciesIds: Set<number>) => void; // Step 2: 選択種を即時確定
   updateFilters: (filters: Partial<SpeciesFilters>) => void;
   setSortBy: (sortBy: SortBy) => void;
   clearSpecies: () => void;
@@ -118,47 +117,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Step 2: 選択された種のみWikipedia情報を取得（バッチ処理）
-  enrichWithWikipedia: async (selectedSpeciesIds) => {
+  // Step 2: 選択された種を即時確定（Wikipedia取得なし）
+  enrichWithWikipedia: (selectedSpeciesIds) => {
     const { allSpecies } = get();
     const selectedSpecies = allSpecies.filter((s) => selectedSpeciesIds.has(s.id));
-
     set({
-      isLoading: true,
-      error: null,
-      progress: { current: 0, total: selectedSpecies.length, message: 'Wikipedia情報を取得中...' },
-      // showTaxonModal はそのまま（モーダルを閉じない）
+      species: selectedSpecies,
+      showTaxonModal: false,
     });
-
-    try {
-      const wikipediaAPI = new WikipediaAPI();
-
-      // バッチ処理（有URL種は複数を1リクエストでまとめて取得、無URL種は並列チャンク処理）
-      const enrichedSpecies = await wikipediaAPI.enrichBatch(
-        selectedSpecies,
-        (current, total, message) => {
-          set({ progress: { current, total, message } });
-        }
-      );
-
-      console.log(`Wikipedia enrichment completed: ${enrichedSpecies.length} species`);
-
-      set({
-        species: enrichedSpecies,
-        isLoading: false,
-        progress: null,
-        showTaxonModal: false, // 完了後にモーダルを閉じる
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      console.error('Error enriching with Wikipedia:', error);
-      set({
-        error: errorMessage,
-        isLoading: false,
-        progress: null,
-        showTaxonModal: false, // エラー時もモーダルを閉じる
-      });
-    }
   },
 
   // フィルタ更新

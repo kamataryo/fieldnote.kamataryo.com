@@ -23,13 +23,6 @@ export interface Species {
     genus?: string;
   };
   wikipediaUrl?: string;
-  description?: string;
-  wikipediaImage?: {
-    url: string;
-    attribution: string;
-    license: string;
-    author: string;
-  };
 }
 
 export interface SpeciesFilters {
