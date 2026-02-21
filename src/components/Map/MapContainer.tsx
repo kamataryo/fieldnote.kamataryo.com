@@ -116,8 +116,19 @@ export function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDele
     });
 
     // クリーンアップ
+    // map.remove() は内部で Hash.remove() -> _removeHash() を呼び、URLハッシュを消してしまう。
+    // React Strict Mode でエフェクトが2回実行される際に2回目の初期化でハッシュが失われる問題を防ぐため、
+    // map.remove() の前後でハッシュを保存・復元する。
     return () => {
+      const savedHash = window.location.hash;
       map.remove();
+      if (savedHash) {
+        window.history.replaceState(
+          window.history.state,
+          '',
+          window.location.pathname + window.location.search + savedHash,
+        );
+      }
       mapRef.current = null;
       drawRef.current = null;
     };
