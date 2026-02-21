@@ -25,10 +25,3 @@ export interface Species {
   wikipediaUrl?: string;
 }
 
-export interface SpeciesFilters {
-  rank?: string;
-  hasPhoto: boolean;
-  searchTerm: string;
-}
-
-export type SortBy = 'name' | 'observationCount' | 'rank';

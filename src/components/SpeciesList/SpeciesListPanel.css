@@ -75,6 +75,94 @@
   padding: 1rem;
 }
 
+/* 分類群ビュー: TOC */
+.taxonomy-toc {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.taxonomy-toc__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #3bb2d0;
+  border-radius: 999px;
+  background: transparent;
+  color: #3bb2d0;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.taxonomy-toc__item:hover {
+  background: #3bb2d0;
+  color: #fff;
+}
+
+.taxonomy-toc__count {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* 分類群ビュー: 門セクション */
+.taxonomy-groups {
+  padding: 0 1rem 1rem;
+}
+
+.taxonomy-phylum {
+  margin-top: 1.5rem;
+}
+
+.taxonomy-phylum__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2c3e50;
+  border-bottom: 2px solid #3bb2d0;
+  padding-bottom: 0.3rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.taxonomy-phylum__heading span {
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #888;
+}
+
+/* 分類群ビュー: 綱セクション */
+.taxonomy-class {
+  margin-bottom: 1rem;
+}
+
+.taxonomy-class__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 0.5rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid #ddd;
+}
+
+.taxonomy-class__heading span {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #aaa;
+}
+
 @media (max-width: 1024px) {
   .species-list-panel {
     border-left: none;
@@ -83,6 +171,32 @@
 
   .species-list-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .taxonomy-toc {
+    background: #1a1a1a;
+    border-bottom-color: #333;
+  }
+
+  .taxonomy-toc__item {
+    border-color: #3bb2d0;
+    color: #3bb2d0;
+  }
+
+  .taxonomy-toc__item:hover {
+    background: #3bb2d0;
+    color: #1a1a1a;
+  }
+
+  .taxonomy-phylum__heading {
+    color: #ddd;
+  }
+
+  .taxonomy-class__heading {
+    color: #aaa;
+    border-left-color: #444;
   }
 }
 
