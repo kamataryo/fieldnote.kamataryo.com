@@ -26,6 +26,7 @@ interface MapContainerProps {
   onPolygonUpdated?: (polygon: Feature<Polygon>) => void;
   onPolygonDeleted?: () => void;
   onSpeciesMarkerClick?: (id: number) => void;
+  drawLocked?: boolean;
 }
 
 function speciesToGeoJSON(species: Species[]): GeoJSON.FeatureCollection {
@@ -44,7 +45,7 @@ function speciesToGeoJSON(species: Species[]): GeoJSON.FeatureCollection {
   };
 }
 
-export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted, onSpeciesMarkerClick }, ref) {
+export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted, onSpeciesMarkerClick, drawLocked }, ref) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -52,6 +53,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
   const onSpeciesMarkerClickRef = useRef(onSpeciesMarkerClick);
   const [canDraw, setCanDraw] = useState(false);
   const canDrawRef = useRef(false);
+  const drawLockedRef = useRef(drawLocked ?? false);
 
   useImperativeHandle(ref, () => ({
     deletePolygon: () => {
@@ -60,7 +62,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       const hadCompleted = hasCompletedPolygonRef.current;
       draw.deleteAll();
       hasCompletedPolygonRef.current = false;
-      if (canDrawRef.current) {
+      if (canDrawRef.current && !drawLockedRef.current) {
         draw.changeMode('draw_polygon');
       }
       if (hadCompleted) {
@@ -76,6 +78,25 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
   useEffect(() => { speciesRef.current = species; }, [species]);
   useEffect(() => { onSpeciesMarkerClickRef.current = onSpeciesMarkerClick; }, [onSpeciesMarkerClick]);
   useEffect(() => { canDrawRef.current = canDraw; }, [canDraw]);
+
+  // drawLocked 変化時にモード切り替え
+  useEffect(() => {
+    drawLockedRef.current = drawLocked ?? false;
+    const draw = drawRef.current;
+    const map = mapRef.current;
+    if (!draw || !map) return;
+    if (drawLocked) {
+      draw.changeMode('simple_select');
+    } else {
+      // ロック解除時はズームに応じてモード復元
+      const drawable = map.getZoom() >= MIN_DRAW_ZOOM;
+      setCanDraw(drawable);
+      canDrawRef.current = drawable;
+      if (drawable && !hasCompletedPolygonRef.current) {
+        draw.changeMode('draw_polygon');
+      }
+    }
+  }, [drawLocked]);
 
   // species 変化時に GeoJSON ソースを更新
   useEffect(() => {
@@ -157,7 +178,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       const drawable = map.getZoom() >= MIN_DRAW_ZOOM;
       setCanDraw(drawable);
       canDrawRef.current = drawable;
-      if (drawable && !hasCompletedPolygonRef.current) {
+      if (drawable && !hasCompletedPolygonRef.current && !drawLockedRef.current) {
         draw.changeMode('draw_polygon');
       } else if (!drawable) {
         draw.changeMode('simple_select');
@@ -226,7 +247,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
   return (
     <div className="map-outer">
       <div ref={mapContainerRef} className="map-container" />
-      {!canDraw && (
+      {!canDraw && !drawLocked && (
         <div className="map-zoom-notice">
           描画するにはズームインしてください（Lv.13 以上）
         </div>

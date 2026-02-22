@@ -101,6 +101,7 @@ function App() {
           onPolygonUpdated={handlePolygonUpdated}
           onPolygonDeleted={handlePolygonDeleted}
           onSpeciesMarkerClick={(id) => setPopupSpeciesId(id)}
+          drawLocked={species.length > 0}
         />
         <SpeciesListPanel />
       </main>
@@ -108,12 +109,6 @@ function App() {
       {(species.length > 0 || (currentPolygon !== null && !showTaxonModal && !isLoading)) && (
         <button className="reset-float-btn" onClick={handleReset}>やり直す</button>
       )}
-      {species.length > 0 && (
-        <button className="print-float-btn" onClick={() => window.print()}>
-          印刷
-        </button>
-      )}
-
       {popupSpecies && (
         <SpeciesPopup species={popupSpecies} onClose={() => setPopupSpeciesId(null)} />
       )}

@@ -82,6 +82,13 @@ export function SpeciesListPanel() {
             </section>
           ))}
         </div>
+
+        {/* 印刷ボタン */}
+        <div className="species-list-print-area">
+          <button className="species-list-print-btn" onClick={() => window.print()}>
+            印刷
+          </button>
+        </div>
       </div>
     </div>
   );

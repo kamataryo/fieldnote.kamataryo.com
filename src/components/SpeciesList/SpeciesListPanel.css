@@ -66,6 +66,32 @@
   padding: 1rem;
 }
 
+/* 印刷ボタンエリア */
+.species-list-print-area {
+  padding: 2rem 1rem 2.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.species-list-print-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: #3bb2d0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: background 0.15s;
+}
+
+.species-list-print-btn:hover {
+  background: #2a8ca0;
+}
+
 /* 分類群ビュー: TOC */
 .taxonomy-toc {
   position: sticky;
@@ -173,6 +199,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  .species-list-print-btn {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
   .taxonomy-toc {
     background: #1a1a1a;
     border-bottom-color: #333;
@@ -235,8 +265,9 @@
     overflow: visible;
   }
 
-  /* 目次は印刷不要 */
-  .taxonomy-toc {
+  /* 目次・印刷ボタンは印刷不要 */
+  .taxonomy-toc,
+  .species-list-print-area {
     display: none;
   }
 

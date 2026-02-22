@@ -93,24 +93,6 @@
   color: #666;
 }
 
-.print-float-btn {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 500;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: #3bb2d0;
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-.print-float-btn:hover { background: #2a8ca0; }
-
 .reset-float-btn {
   position: fixed;
   bottom: 5.5rem;
@@ -152,7 +134,6 @@
   /* ヘッダー・地図・フローティングボタンを非表示 */
   .app-header,
   .map-outer,
-  .print-float-btn,
   .reset-float-btn {
     display: none !important;
   }
