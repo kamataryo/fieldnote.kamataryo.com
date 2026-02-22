@@ -112,6 +112,24 @@
 .pdf-float-btn:hover { background: #2a8ca0; }
 .pdf-float-btn:disabled { background: #aaa; cursor: default; }
 
+.reset-float-btn {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  z-index: 500;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #fff;
+  color: #e74c3c;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #e74c3c;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.reset-float-btn:hover { background: #e74c3c; color: #fff; }
+
 @media (prefers-color-scheme: light) {
   .app-header {
     background-color: #f5f5f5;

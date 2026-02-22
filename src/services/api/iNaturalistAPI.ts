@@ -142,10 +142,27 @@ export class INaturalistAPI extends APIClient {
           });
 
           (response.results || []).forEach((taxon: any) => {
+            // taxon 写真: taxon_photos からオープンライセンスのものを最大 3 枚収集
+            const taxonPhotos: Array<{ url: string; attribution: string; license: string }> = [];
+            const rawPhotos: any[] = taxon.taxon_photos?.map((tp: any) => tp.photo) ?? [];
+            if (rawPhotos.length === 0 && taxon.default_photo) {
+              rawPhotos.push(taxon.default_photo);
+            }
+            for (const photo of rawPhotos) {
+              if (!photo?.license_code) continue; // closed license は除外
+              taxonPhotos.push({
+                url: photo.url.replace('square', 'medium'),
+                attribution: photo.attribution ?? '',
+                license: photo.license_code,
+              });
+              if (taxonPhotos.length >= 3) break;
+            }
+
             this.taxonCache.set(taxon.id, {
               taxonomy: {}, // Step C で後から設定
               japaneseName: taxon.preferred_common_name,
               wikipediaUrl: taxon.wikipedia_url,
+              taxonPhotos: taxonPhotos.length > 0 ? taxonPhotos : undefined,
             });
           });
         } catch (error) {
@@ -205,8 +222,21 @@ export class INaturalistAPI extends APIClient {
         else if (rank === 'genus') taxonomy.genus = ancestor.name;
       });
 
+      // 写真が不足している場合、taxon 写真で補完
+      const photos = [...s.photos];
+      if (photos.length < 3 && cached?.taxonPhotos) {
+        for (const p of cached.taxonPhotos) {
+          if (photos.length >= 3) break;
+          // 同じ URL が既にある場合は追加しない
+          if (!photos.some((existing) => existing.url === p.url)) {
+            photos.push(p);
+          }
+        }
+      }
+
       return {
         ...s,
+        photos,
         taxonomy,
         commonName: cached?.japaneseName || s.commonName,
         wikipediaUrl: cached?.wikipediaUrl,
@@ -217,7 +247,12 @@ export class INaturalistAPI extends APIClient {
     return enrichedSpecies;
   }
 
-  private taxonCache = new Map<number, { taxonomy: Species['taxonomy']; japaneseName?: string; wikipediaUrl?: string }>();
+  private taxonCache = new Map<number, {
+    taxonomy: Species['taxonomy'];
+    japaneseName?: string;
+    wikipediaUrl?: string;
+    taxonPhotos?: Array<{ url: string; attribution: string; license: string }>;
+  }>();
 
   // 各 taxon の祖先 ID を保持（aggregateBySpecies で観察データから取得）
   private taxonAncestorIds = new Map<number, number[]>();
@@ -259,16 +294,17 @@ export class INaturalistAPI extends APIClient {
       const species = map.get(taxonId)!;
       species.observationCount++;
 
-      // 写真追加（最大3枚まで）
+      // 写真追加（最大3枚まで、オープンライセンスのみ）
       if (species.photos.length < 3 && obs.photos.length > 0) {
         const photo = obs.photos[0];
-        // 画像URLをmediumサイズに変更
-        const mediumUrl = photo.url.replace('square', 'medium');
-        species.photos.push({
-          url: mediumUrl,
-          attribution: photo.attribution,
-          license: photo.license_code || 'unknown',
-        });
+        if (photo.license_code) {  // null/undefined/空文字（all rights reserved）を除外
+          const mediumUrl = photo.url.replace('square', 'medium');
+          species.photos.push({
+            url: mediumUrl,
+            attribution: photo.attribution,
+            license: photo.license_code,
+          });
+        }
       }
     }
 

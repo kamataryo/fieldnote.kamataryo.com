@@ -7,6 +7,7 @@ interface SpeciesCardProps {
 
 const RANK_TRANSLATIONS: Record<string, string> = {
   species: '種',
+  subspecies: '亜種',
   genus: '属',
   family: '科',
   order: '目',
@@ -38,16 +39,14 @@ export function SpeciesCard({ species }: SpeciesCardProps) {
           <span className="badge badge--obs">観察数: {species.observationCount}</span>
         </div>
 
-        {species.wikipediaUrl && (
-          <a
-            href={species.wikipediaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="species-card__link"
-          >
-            Wikipediaで詳細を見る →
-          </a>
-        )}
+        <a
+          href={`https://www.inaturalist.org/taxa/${species.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="species-card__link"
+        >
+          iNaturalist で詳細を見る →
+        </a>
 
         {imageUrl && species.photos[0] && (
           <div className="species-card__attribution">

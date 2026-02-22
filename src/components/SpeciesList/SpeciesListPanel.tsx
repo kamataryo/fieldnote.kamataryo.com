@@ -33,9 +33,6 @@ export function SpeciesListPanel() {
       <div className="species-list-panel">
         <div className="species-list-empty">
           <p>地図上でポリゴンを描画してください</p>
-          <p className="species-list-empty__hint">
-            左上のポリゴンボタンをクリックして、観察したいエリアを囲みましょう
-          </p>
         </div>
       </div>
     );

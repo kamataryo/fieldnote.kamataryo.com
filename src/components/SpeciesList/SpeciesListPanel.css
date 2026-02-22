@@ -157,7 +157,7 @@
 @media (max-width: 1024px) {
   .species-list-panel {
     border-left: none;
-    border-top: 1px solid #ddd;
+    /* border-top: 1px solid #ddd; */
     height: auto;
     overflow: visible;
   }

@@ -29,6 +29,7 @@ interface AppState {
   fetchInitialSpecies: (polygon: Feature<Polygon>) => Promise<void>;
   enrichWithWikipedia: (selectedSpeciesIds: Set<number>) => void;
   clearSpecies: () => void;
+  cancelSelection: () => void;
   setShowTaxonModal: (show: boolean) => void;
   setSelectedSpeciesId: (id: number | null) => void;
 }
@@ -82,6 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           species: [],
           isLoading: false,
           progress: null,
+          showTaxonModal: false,
           error: 'この範囲に観察記録がありませんでした',
         });
         return;
@@ -115,12 +117,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  // データクリア
+  // データクリア（currentPolygon も含めて完全リセット）
   clearSpecies: () => {
     set({
       species: [],
       allSpecies: [],
       currentPolygon: null,
+      error: null,
+      progress: null,
+      showTaxonModal: false,
+      selectedSpeciesId: null,
+    });
+  },
+
+  // モーダルキャンセル時のリセット（currentPolygon は残す → やり直すボタンを維持）
+  cancelSelection: () => {
+    set({
+      species: [],
+      allSpecies: [],
       error: null,
       progress: null,
       showTaxonModal: false,

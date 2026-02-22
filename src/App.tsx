@@ -20,6 +20,7 @@ function App() {
     fetchInitialSpecies,
     enrichWithWikipedia,
     clearSpecies,
+    cancelSelection,
     setShowTaxonModal,
     allSpecies,
     species,
@@ -27,6 +28,7 @@ function App() {
     error,
     progress,
     showTaxonModal,
+    currentPolygon,
   } = useAppStore()
 
   const popupSpecies = useMemo(
@@ -91,9 +93,13 @@ function App() {
 
   const handleTaxonSelectionCancel = useCallback(() => {
     console.log('Taxon selection cancelled')
-    setShowTaxonModal(false)
+    cancelSelection()
+  }, [cancelSelection])
+
+  const handleReset = useCallback(() => {
     clearSpecies()
-  }, [setShowTaxonModal, clearSpecies])
+    mapRef.current?.deletePolygon()
+  }, [clearSpecies])
 
   return (
     <div className="app">
@@ -113,6 +119,9 @@ function App() {
         <SpeciesListPanel />
       </main>
 
+      {(species.length > 0 || (currentPolygon !== null && !showTaxonModal && !isLoading)) && (
+        <button className="reset-float-btn" onClick={handleReset}>やり直す</button>
+      )}
       {species.length > 0 && (
         <button className="pdf-float-btn" onClick={handlePDFExport} disabled={isExporting}>
           {isExporting ? '...' : 'PDF'}

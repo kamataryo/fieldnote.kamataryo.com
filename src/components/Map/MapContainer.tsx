@@ -65,9 +65,8 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
     },
   }), [onPolygonDeleted]);
 
-  const { species, setSelectedSpeciesId } = useAppStore();
+  const { species } = useAppStore();
   const speciesRef = useRef(species);
-  const setSelectedSpeciesIdRef = useRef(setSelectedSpeciesId);
 
   // ref を常に最新の値に保つ
   useEffect(() => { speciesRef.current = species; }, [species]);
@@ -100,10 +99,6 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true,
-      },
       styles: DRAW_STYLES as any,
     });
 
@@ -138,27 +133,10 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       map.on('click', 'species-circles', (e) => {
         const taxonId = e.features?.[0]?.properties?.taxonId;
         if (taxonId != null) {
-          const id = Number(taxonId);
-          setSelectedSpeciesIdRef.current(id);
-          onSpeciesMarkerClickRef.current?.(id);
+          onSpeciesMarkerClickRef.current?.(Number(taxonId));
         }
       });
     };
-
-    // トラッシュボタンの乗っ取り
-    const trashButton = map.getContainer().querySelector('.mapbox-gl-draw_trash') as HTMLElement | null;
-    trashButton?.addEventListener('click', (e) => {
-      e.stopImmediatePropagation();
-
-      const hadCompleted = hasCompletedPolygonRef.current;
-      draw.deleteAll();
-      draw.changeMode('draw_polygon');
-      hasCompletedPolygonRef.current = false;
-
-      if (hadCompleted) {
-        onPolygonDeleted?.();
-      }
-    }, true);
 
     map.once('load', () => {
       setupSpeciesLayer();
