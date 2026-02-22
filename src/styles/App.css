@@ -93,7 +93,7 @@
   color: #666;
 }
 
-.pdf-float-btn {
+.print-float-btn {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
@@ -109,8 +109,7 @@
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
-.pdf-float-btn:hover { background: #2a8ca0; }
-.pdf-float-btn:disabled { background: #aaa; cursor: default; }
+.print-float-btn:hover { background: #2a8ca0; }
 
 .reset-float-btn {
   position: fixed;
@@ -142,5 +141,29 @@
 
   .placeholder {
     color: #999;
+  }
+}
+
+@media print {
+  @page {
+    margin: 15mm 12mm;
+  }
+
+  /* ヘッダー・地図・フローティングボタンを非表示 */
+  .app-header,
+  .map-outer,
+  .print-float-btn,
+  .reset-float-btn {
+    display: none !important;
+  }
+
+  .app {
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-main {
+    display: block;
+    overflow: visible;
   }
 }

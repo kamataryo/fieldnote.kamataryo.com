@@ -27,7 +27,6 @@ export default defineConfig({
         manualChunks: {
           'maplibre': ['maplibre-gl'],
           'turf': ['@turf/turf'],
-          'pdfmake': ['pdfmake']
         }
       }
     }

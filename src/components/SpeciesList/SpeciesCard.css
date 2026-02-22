@@ -133,3 +133,55 @@
     border-top-color: #444;
   }
 }
+
+@media print {
+  .species-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .species-card__image {
+    height: 160px;
+  }
+
+  .species-card__name {
+    color: #111;
+  }
+
+  .species-card__english {
+    color: #555;
+  }
+
+  .species-card__scientific {
+    color: #444;
+  }
+
+  .species-card__description {
+    color: #333;
+  }
+
+  .badge--rank {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .badge--obs {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .species-card__link {
+    display: none;
+  }
+
+  .species-card__attribution {
+    border-top-color: #eee;
+    color: #777;
+  }
+}

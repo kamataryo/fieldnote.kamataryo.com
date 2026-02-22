@@ -7,12 +7,10 @@ import { SpeciesPopup } from '@components/SpeciesPopup/SpeciesPopup'
 import type { Feature, Polygon } from '@types/map'
 import { useAppStore } from '@store/appStore'
 import { buildTaxonomyTree, getSelectedSpeciesIds } from '@services/taxonomyUtils'
-import { PDFExporter } from '@services/export/pdfExporter'
 import './styles/App.css'
 
 function App() {
   const mapRef = useRef<MapContainerHandle>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const [popupSpeciesId, setPopupSpeciesId] = useState<number | null>(null);
 
   const {
@@ -35,18 +33,6 @@ function App() {
     () => species.find((s) => s.id === popupSpeciesId) ?? null,
     [species, popupSpeciesId]
   );
-
-  const handlePDFExport = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      const exporter = new PDFExporter();
-      await exporter.export(species, '野外観察図鑑');
-    } catch (e) {
-      console.error('PDF export error:', e);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [species]);
 
   // 分類群ツリーを生成
   const taxonomyTree = useMemo(() => {
@@ -123,8 +109,8 @@ function App() {
         <button className="reset-float-btn" onClick={handleReset}>やり直す</button>
       )}
       {species.length > 0 && (
-        <button className="pdf-float-btn" onClick={handlePDFExport} disabled={isExporting}>
-          {isExporting ? '...' : 'PDF'}
+        <button className="print-float-btn" onClick={() => window.print()}>
+          印刷
         </button>
       )}
 

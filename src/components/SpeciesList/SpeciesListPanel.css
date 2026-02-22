@@ -221,3 +221,43 @@
     border-top-color: #3bb2d0;
   }
 }
+
+@media print {
+  .species-list-panel {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border: none;
+    background: #fff;
+  }
+
+  .species-list-scroll {
+    overflow: visible;
+  }
+
+  /* 目次は印刷不要 */
+  .taxonomy-toc {
+    display: none;
+  }
+
+  .taxonomy-groups {
+    padding: 0;
+  }
+
+  .taxonomy-phylum__heading {
+    color: #2c3e50;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .taxonomy-class__heading {
+    color: #444;
+  }
+
+  /* カードを2列に */
+  .species-list-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+}
