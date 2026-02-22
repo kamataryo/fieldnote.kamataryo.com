@@ -25,6 +25,7 @@ export const DEFAULT_BASEMAP: BasemapType = 'gsi-standard';
 
 export const DEFAULT_MAP_CENTER: [number, number] = [139.7690, 35.6804]; // 東京
 export const DEFAULT_MAP_ZOOM = 10;
+export const MIN_DRAW_ZOOM = 13;
 
 export const DRAW_STYLES = [
   {

@@ -1,11 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { Feature, Polygon } from '@types/map';
 import type { Species } from '@types/species';
 import { BasemapControl } from './BasemapControl';
 import { getMapStyle } from '@services/mapUtils';
-import { DEFAULT_BASEMAP, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, DRAW_STYLES } from '@constants/mapConfig';
+import { DEFAULT_BASEMAP, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, DRAW_STYLES, MIN_DRAW_ZOOM } from '@constants/mapConfig';
 import { getPhylumColor } from '@constants/taxonIcons';
 import { useAppStore } from '@store/appStore';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -50,6 +50,8 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
   const drawRef = useRef<MapboxDraw | null>(null);
   const hasCompletedPolygonRef = useRef(false);
   const onSpeciesMarkerClickRef = useRef(onSpeciesMarkerClick);
+  const [canDraw, setCanDraw] = useState(false);
+  const canDrawRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     deletePolygon: () => {
@@ -57,8 +59,10 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       if (!draw) return;
       const hadCompleted = hasCompletedPolygonRef.current;
       draw.deleteAll();
-      draw.changeMode('draw_polygon');
       hasCompletedPolygonRef.current = false;
+      if (canDrawRef.current) {
+        draw.changeMode('draw_polygon');
+      }
       if (hadCompleted) {
         onPolygonDeleted?.();
       }
@@ -71,6 +75,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
   // ref を常に最新の値に保つ
   useEffect(() => { speciesRef.current = species; }, [species]);
   useEffect(() => { onSpeciesMarkerClickRef.current = onSpeciesMarkerClick; }, [onSpeciesMarkerClick]);
+  useEffect(() => { canDrawRef.current = canDraw; }, [canDraw]);
 
   // species 変化時に GeoJSON ソースを更新
   useEffect(() => {
@@ -140,7 +145,23 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
 
     map.once('load', () => {
       setupSpeciesLayer();
-      draw.changeMode('draw_polygon');
+      const initialZoom = map.getZoom();
+      if (initialZoom >= MIN_DRAW_ZOOM) {
+        draw.changeMode('draw_polygon');
+        setCanDraw(true);
+        canDrawRef.current = true;
+      }
+    });
+
+    map.on('zoom', () => {
+      const drawable = map.getZoom() >= MIN_DRAW_ZOOM;
+      setCanDraw(drawable);
+      canDrawRef.current = drawable;
+      if (drawable && !hasCompletedPolygonRef.current) {
+        draw.changeMode('draw_polygon');
+      } else if (!drawable) {
+        draw.changeMode('simple_select');
+      }
     });
 
     // ベースマップ切り替えコントロール
@@ -202,5 +223,14 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
     };
   }, [onPolygonCreated, onPolygonUpdated, onPolygonDeleted]);
 
-  return <div ref={mapContainerRef} className="map-container" />;
+  return (
+    <div className="map-outer">
+      <div ref={mapContainerRef} className="map-container" />
+      {!canDraw && (
+        <div className="map-zoom-notice">
+          描画するにはズームインしてください（Lv.13 以上）
+        </div>
+      )}
+    </div>
+  );
 });
