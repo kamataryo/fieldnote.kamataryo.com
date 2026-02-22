@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Feature, Polygon } from '@types/map';
-import type { Species } from '@types/species';
+import type { Feature, Polygon } from '@t/map';
+import type { Species } from '@t/species';
 import { INaturalistAPI } from '@services/api/iNaturalistAPI';
 
 interface AppState {

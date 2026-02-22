@@ -1,5 +1,17 @@
-import type { Feature, Polygon } from 'geojson';
 import type { Map as MaplibreMap, IControl } from 'maplibre-gl';
+
+// GeoJSON types (inline to avoid @types/geojson dependency)
+export type Polygon = {
+  type: 'Polygon';
+  coordinates: number[][][];
+};
+
+export type Feature<G = { type: string; coordinates: unknown }> = {
+  type: 'Feature';
+  geometry: G;
+  properties: Record<string, unknown> | null;
+  id?: string | number;
+};
 
 export type BasemapType = 'gsi-standard' | 'gsi-photo';
 
@@ -13,27 +25,6 @@ export interface BasemapConfig {
   maxzoom: number;
 }
 
-export interface MapStyle {
-  version: 8;
-  name: string;
-  glyphs: string;
-  sources: {
-    basemap: {
-      type: 'raster';
-      tiles: string[];
-      tileSize: number;
-      attribution: string;
-      maxzoom: number;
-    };
-  };
-  layers: Array<{
-    id: string;
-    type: string;
-    source: string;
-    paint?: Record<string, unknown>;
-  }>;
-}
-
 export interface BasemapControlOptions {
   initialBasemap?: BasemapType;
   onBasemapChange?: (basemapId: BasemapType) => void;
@@ -44,4 +35,4 @@ export interface DrawEvent {
   features: Feature[];
 }
 
-export type { Feature, Polygon, MaplibreMap, IControl };
+export type { MaplibreMap, IControl };

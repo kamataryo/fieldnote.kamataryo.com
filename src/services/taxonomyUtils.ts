@@ -1,5 +1,5 @@
-import type { Species } from '@types/species';
-import type { TaxonNode } from '@types/taxonomy';
+import type { Species } from '@t/species';
+import type { TaxonNode } from '@t/taxonomy';
 import { translateTaxonName } from '@constants/taxonomyTranslations';
 import { getPhylumIcon } from '@constants/taxonIcons';
 
@@ -64,7 +64,7 @@ export function buildTaxonomyTree(species: Species[]): TaxonNode[] {
       a[1].displayName.localeCompare(b[1].displayName, 'ja')
     );
 
-    const classNodes: TaxonNode[] = sortedClasses.map(([className, classData]) => ({
+    const classNodes: TaxonNode[] = sortedClasses.map(([, classData]) => ({
       name: classData.displayName, // 日本語名を使用
       rank: 'class',
       count: classData.speciesIds.length,

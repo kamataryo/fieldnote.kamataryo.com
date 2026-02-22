@@ -1,9 +1,8 @@
-import type { IControl, MaplibreMap } from 'maplibre-gl';
-import type { BasemapType, BasemapControlOptions } from '@types/map';
+import type { IControl, Map as MaplibreMap } from 'maplibre-gl';
+import type { BasemapType, BasemapControlOptions } from '@t/map';
 import { basemaps, DEFAULT_BASEMAP } from '@constants/mapConfig';
 
 export class BasemapControl implements IControl {
-  private _map?: MaplibreMap;
   private _container?: HTMLDivElement;
   private _currentBasemap: BasemapType;
   private _onBasemapChange: (basemapId: BasemapType) => void;
@@ -13,8 +12,7 @@ export class BasemapControl implements IControl {
     this._onBasemapChange = options.onBasemapChange || (() => {});
   }
 
-  onAdd(map: MaplibreMap): HTMLElement {
-    this._map = map;
+  onAdd(_map: MaplibreMap): HTMLElement {
     this._container = document.createElement('div');
     this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
 
@@ -54,6 +52,5 @@ export class BasemapControl implements IControl {
     if (this._container && this._container.parentNode) {
       this._container.parentNode.removeChild(this._container);
     }
-    this._map = undefined;
   }
 }

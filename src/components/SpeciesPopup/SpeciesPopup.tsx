@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { Species } from '@types/species';
+import type { Species } from '@t/species';
 import { SpeciesCard } from '@components/SpeciesList/SpeciesCard';
 import './SpeciesPopup.css';
 

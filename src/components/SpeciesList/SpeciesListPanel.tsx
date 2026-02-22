@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useAppStore } from '@store/appStore';
 import { SpeciesCard } from './SpeciesCard';
 import { buildTaxonomyTree } from '@services/taxonomyUtils';
-import type { Species } from '@types/species';
+import type { Species } from '@t/species';
 import './SpeciesListPanel.css';
 
 export function SpeciesListPanel() {

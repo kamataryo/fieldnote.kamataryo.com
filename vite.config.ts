@@ -11,7 +11,7 @@ export default defineConfig({
       '@components': resolve(__dirname, 'src/components'),
       '@services': resolve(__dirname, 'src/services'),
       '@hooks': resolve(__dirname, 'src/hooks'),
-      '@types': resolve(__dirname, 'src/types'),
+      '@t': resolve(__dirname, 'src/types'),
       '@store': resolve(__dirname, 'src/store'),
       '@constants': resolve(__dirname, 'src/constants')
     }

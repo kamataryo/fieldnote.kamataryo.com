@@ -1,8 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import type { Feature, Polygon } from '@types/map';
-import type { Species } from '@types/species';
+import type { Feature, Polygon } from '@t/map';
+import type { Species } from '@t/species';
 import { BasemapControl } from './BasemapControl';
 import { getMapStyle } from '@services/mapUtils';
 import { DEFAULT_BASEMAP, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, DRAW_STYLES, MIN_DRAW_ZOOM } from '@constants/mapConfig';
@@ -118,7 +118,6 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       zoom: DEFAULT_MAP_ZOOM,
       style: getMapStyle(initialBasemap),
       hash: true,
-      attributionControl: true,
     });
 
     mapRef.current = map;

@@ -1,7 +1,8 @@
-import type { BasemapType, MapStyle } from '@types/map';
+import type { StyleSpecification } from 'maplibre-gl';
+import type { BasemapType } from '@t/map';
 import { basemaps } from '@constants/mapConfig';
 
-export function getMapStyle(basemapId: BasemapType): MapStyle {
+export function getMapStyle(basemapId: BasemapType): StyleSpecification {
   const basemap = basemaps[basemapId];
 
   return {

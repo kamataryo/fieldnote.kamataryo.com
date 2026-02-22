@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { TaxonNode } from '@types/taxonomy';
+import type { TaxonNode } from '@t/taxonomy';
 import './TaxonSelectionModal.css';
 
 interface TaxonSelectionModalProps {

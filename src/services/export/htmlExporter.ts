@@ -1,4 +1,4 @@
-import type { Species } from '@types/species';
+import type { Species } from '@t/species';
 import { format } from 'date-fns';
 
 const RANK_TRANSLATIONS: Record<string, string> = {

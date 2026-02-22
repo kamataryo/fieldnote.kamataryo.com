@@ -4,7 +4,7 @@ import type { MapContainerHandle } from '@components/Map/MapContainer'
 import { SpeciesListPanel } from '@components/SpeciesList/SpeciesListPanel'
 import { TaxonSelectionModal } from '@components/TaxonSelectionModal/TaxonSelectionModal'
 import { SpeciesPopup } from '@components/SpeciesPopup/SpeciesPopup'
-import type { Feature, Polygon } from '@types/map'
+import type { Feature, Polygon } from '@t/map'
 import { useAppStore } from '@store/appStore'
 import { buildTaxonomyTree, getSelectedSpeciesIds } from '@services/taxonomyUtils'
 import './styles/App.css'
@@ -19,7 +19,6 @@ function App() {
     enrichWithWikipedia,
     clearSpecies,
     cancelSelection,
-    setShowTaxonModal,
     allSpecies,
     species,
     isLoading,

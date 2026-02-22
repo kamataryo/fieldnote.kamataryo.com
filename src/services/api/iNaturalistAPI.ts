@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
-import type { Feature, Polygon } from '@types/map';
-import type { Species } from '@types/species';
-import type { INaturalistResponse, INaturalistObservation } from '@types/api';
+import type { Feature, Polygon } from '@t/map';
+import type { Species } from '@t/species';
+import type { INaturalistResponse, INaturalistObservation } from '@t/api';
 import { APIClient, RateLimiter } from './apiClient';
 
 // iconic_taxon_name から phylum/class を静的に解決できるマッピング
@@ -341,7 +341,7 @@ export class INaturalistAPI extends APIClient {
     return lookup;
   }
 
-  private filterInsidePolygon(species: Species[], polygon: Feature<Polygon>): Species[] {
+  private filterInsidePolygon(species: Species[], _polygon: Feature<Polygon>): Species[] {
     // 簡略化のため、バウンディングボックス検索結果をそのまま使用
     // 必要に応じて turf.booleanPointInPolygon で厳密フィルタ可能
     return species;

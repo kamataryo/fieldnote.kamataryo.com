@@ -1,4 +1,4 @@
-import type { BasemapConfig, BasemapType } from '@types/map';
+import type { BasemapConfig, BasemapType } from '@t/map';
 
 export const basemaps: Record<BasemapType, BasemapConfig> = {
   'gsi-standard': {

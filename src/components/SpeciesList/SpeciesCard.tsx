@@ -1,4 +1,4 @@
-import type { Species } from '@types/species';
+import type { Species } from '@t/species';
 import './SpeciesCard.css';
 
 interface SpeciesCardProps {
