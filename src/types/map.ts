@@ -13,7 +13,7 @@ export type Feature<G = { type: string; coordinates: unknown }> = {
   id?: string | number;
 };
 
-export type BasemapType = 'gsi-standard' | 'gsi-photo';
+export type BasemapType = 'gsi-standard' | 'gsi-photo' | 'osm';
 
 export interface BasemapConfig {
   id: BasemapType;

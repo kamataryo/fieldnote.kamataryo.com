@@ -19,6 +19,15 @@ export const basemaps: Record<BasemapType, BasemapConfig> = {
     attribution: '国土地理院 シームレス空中写真',
     maxzoom: 18,
   },
+  'osm': {
+    id: 'osm',
+    name: 'OpenStreetMap',
+    type: 'raster',
+    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+    tileSize: 256,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxzoom: 19,
+  },
 };
 
 export const DEFAULT_BASEMAP: BasemapType = 'gsi-standard';
