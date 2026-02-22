@@ -4,6 +4,7 @@ export interface TaxonNode {
   count: number; // この分類に属する種の数
   children: TaxonNode[];
   speciesIds: number[]; // この分類に属する種のID
+  icon?: string; // 絵文字アイコン（phylum レベルのみ）
 }
 
 export interface TaxonSelection {

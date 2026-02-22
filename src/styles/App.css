@@ -1,23 +1,24 @@
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-header {
   background-color: #1a1a1a;
-  padding: 1.5rem 2rem;
+  padding: 0.4rem 1.5rem;
   border-bottom: 1px solid #333;
 }
 
 .app-header h1 {
-  font-size: 1.8rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
 }
 
 .app-header p {
   color: #888;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
 }
 
 .progress-bar {
@@ -62,24 +63,24 @@
 .app-main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 1fr 1fr;
   position: relative;
   gap: 0;
-  height: calc(100vh - 140px); /* ヘッダーの高さを引く */
-  max-height: calc(100vh - 140px);
+  min-height: 0;
   overflow: hidden;
 }
 
 @media (max-width: 1024px) {
+  .app {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
   .app-main {
     grid-template-columns: 1fr;
-    grid-template-rows: 50vh 50vh;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-main {
-    grid-template-rows: 60vh 40vh;
+    grid-template-rows: auto;
+    overflow: visible;
   }
 }
 
@@ -91,6 +92,25 @@
   font-size: 1.2rem;
   color: #666;
 }
+
+.pdf-float-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 500;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #3bb2d0;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.pdf-float-btn:hover { background: #2a8ca0; }
+.pdf-float-btn:disabled { background: #aaa; cursor: default; }
 
 @media (prefers-color-scheme: light) {
   .app-header {

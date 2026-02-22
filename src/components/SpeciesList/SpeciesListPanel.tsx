@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useAppStore } from '@store/appStore';
 import { SpeciesCard } from './SpeciesCard';
-import { ExportPanel } from '@components/Export/ExportPanel';
 import { buildTaxonomyTree } from '@services/taxonomyUtils';
 import type { Species } from '@types/species';
 import './SpeciesListPanel.css';
@@ -44,8 +43,6 @@ export function SpeciesListPanel() {
 
   return (
     <div className="species-list-panel">
-      <div className="species-list-count">{species.length} 種</div>
-
       <div className="species-list-scroll">
         {/* Sticky 目次 */}
         <div className="taxonomy-toc">
@@ -55,7 +52,7 @@ export function SpeciesListPanel() {
               className="taxonomy-toc__item"
               onClick={() => scrollToSection(`taxon-${phylum.name}`)}
             >
-              {phylum.name}
+              {phylum.icon} {phylum.name}
               <span className="taxonomy-toc__count">{phylum.count}</span>
             </button>
           ))}
@@ -66,7 +63,7 @@ export function SpeciesListPanel() {
           {taxonomyTree.map((phylum) => (
             <section key={phylum.name} id={`taxon-${phylum.name}`} className="taxonomy-phylum">
               <h2 className="taxonomy-phylum__heading">
-                {phylum.name}
+                {phylum.icon} {phylum.name}
                 <span>{phylum.count}種</span>
               </h2>
               {phylum.children.map((cls) => (
@@ -89,8 +86,6 @@ export function SpeciesListPanel() {
           ))}
         </div>
       </div>
-
-      <ExportPanel />
     </div>
   );
 }

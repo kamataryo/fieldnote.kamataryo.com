@@ -190,7 +190,7 @@ export function TaxonSelectionModal({ isOpen, taxonomyTree, onConfirm, onCancel,
                         onChange={() => handleCheckboxChange(phylumKey, phylumNode)}
                       />
                       <span className="tree-node-name">
-                        {phylumNode.name} <span className="tree-node-count">({phylumNode.count}種)</span>
+                        {phylumNode.icon} {phylumNode.name} <span className="tree-node-count">({phylumNode.count}種)</span>
                       </span>
                     </label>
                   </div>

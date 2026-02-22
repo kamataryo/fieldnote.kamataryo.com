@@ -28,15 +28,6 @@
   color: #999;
 }
 
-.species-list-count {
-  padding: 0.75rem 1rem;
-  background: #f0f0f0;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #555;
-  border-bottom: 1px solid #ddd;
-}
-
 .species-list-scroll {
   flex: 1;
   overflow-y: auto;
@@ -167,6 +158,13 @@
   .species-list-panel {
     border-left: none;
     border-top: 1px solid #ddd;
+    height: auto;
+    overflow: visible;
+  }
+
+  .species-list-scroll {
+    overflow: visible;
+    flex: none;
   }
 
   .species-list-grid {
@@ -214,13 +212,7 @@
     color: #666;
   }
 
-  .species-list-count {
-    background: #2a2a2a;
-    color: #ccc;
-    border-bottom-color: #333;
-  }
-
-  .species-list-loading {
+.species-list-loading {
     color: #aaa;
   }
 

@@ -6,6 +6,7 @@ import type { Species } from '@types/species';
 import { BasemapControl } from './BasemapControl';
 import { getMapStyle } from '@services/mapUtils';
 import { DEFAULT_BASEMAP, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, DRAW_STYLES } from '@constants/mapConfig';
+import { getPhylumColor } from '@constants/taxonIcons';
 import { useAppStore } from '@store/appStore';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -24,6 +25,7 @@ interface MapContainerProps {
   onPolygonCreated?: (polygon: Feature<Polygon>) => void;
   onPolygonUpdated?: (polygon: Feature<Polygon>) => void;
   onPolygonDeleted?: () => void;
+  onSpeciesMarkerClick?: (id: number) => void;
 }
 
 function speciesToGeoJSON(species: Species[]): GeoJSON.FeatureCollection {
@@ -34,16 +36,20 @@ function speciesToGeoJSON(species: Species[]): GeoJSON.FeatureCollection {
       .map((s) => ({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: s.location! },
-        properties: { taxonId: s.id },
+        properties: {
+          taxonId: s.id,
+          phylumColor: getPhylumColor(s.taxonomy?.phylum),
+        },
       })),
   };
 }
 
-export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted }, ref) {
+export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(function MapContainer({ onPolygonCreated, onPolygonUpdated, onPolygonDeleted, onSpeciesMarkerClick }, ref) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const hasCompletedPolygonRef = useRef(false);
+  const onSpeciesMarkerClickRef = useRef(onSpeciesMarkerClick);
 
   useImperativeHandle(ref, () => ({
     deletePolygon: () => {
@@ -65,6 +71,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
 
   // ref を常に最新の値に保つ
   useEffect(() => { speciesRef.current = species; }, [species]);
+  useEffect(() => { onSpeciesMarkerClickRef.current = onSpeciesMarkerClick; }, [onSpeciesMarkerClick]);
 
   // species 変化時に GeoJSON ソースを更新
   useEffect(() => {
@@ -116,7 +123,7 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
         source: 'species',
         paint: {
           'circle-radius': 8,
-          'circle-color': '#3bb2d0',
+          'circle-color': ['get', 'phylumColor'],
           'circle-opacity': 0.8,
           'circle-stroke-width': 2,
           'circle-stroke-color': '#fff',
@@ -131,7 +138,9 @@ export const MapContainer = forwardRef<MapContainerHandle, MapContainerProps>(fu
       map.on('click', 'species-circles', (e) => {
         const taxonId = e.features?.[0]?.properties?.taxonId;
         if (taxonId != null) {
-          setSelectedSpeciesIdRef.current(Number(taxonId));
+          const id = Number(taxonId);
+          setSelectedSpeciesIdRef.current(id);
+          onSpeciesMarkerClickRef.current?.(id);
         }
       });
     };

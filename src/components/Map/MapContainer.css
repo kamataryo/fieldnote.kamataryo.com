@@ -42,6 +42,12 @@
   outline-offset: 2px;
 }
 
+@media (max-width: 1024px) {
+  .map-container {
+    height: 60vh;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .maplibregl-ctrl-group {
     background: #2a2a2a;

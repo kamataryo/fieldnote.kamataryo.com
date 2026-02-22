@@ -1,15 +1,19 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { MapContainer } from '@components/Map/MapContainer'
 import type { MapContainerHandle } from '@components/Map/MapContainer'
 import { SpeciesListPanel } from '@components/SpeciesList/SpeciesListPanel'
 import { TaxonSelectionModal } from '@components/TaxonSelectionModal/TaxonSelectionModal'
+import { SpeciesPopup } from '@components/SpeciesPopup/SpeciesPopup'
 import type { Feature, Polygon } from '@types/map'
 import { useAppStore } from '@store/appStore'
 import { buildTaxonomyTree, getSelectedSpeciesIds } from '@services/taxonomyUtils'
+import { PDFExporter } from '@services/export/pdfExporter'
 import './styles/App.css'
 
 function App() {
   const mapRef = useRef<MapContainerHandle>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [popupSpeciesId, setPopupSpeciesId] = useState<number | null>(null);
 
   const {
     setPolygon,
@@ -18,11 +22,29 @@ function App() {
     clearSpecies,
     setShowTaxonModal,
     allSpecies,
+    species,
     isLoading,
     error,
     progress,
     showTaxonModal,
   } = useAppStore()
+
+  const popupSpecies = useMemo(
+    () => species.find((s) => s.id === popupSpeciesId) ?? null,
+    [species, popupSpeciesId]
+  );
+
+  const handlePDFExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const exporter = new PDFExporter();
+      await exporter.export(species, '野外観察図鑑');
+    } catch (e) {
+      console.error('PDF export error:', e);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [species]);
 
   // 分類群ツリーを生成
   const taxonomyTree = useMemo(() => {
@@ -86,9 +108,20 @@ function App() {
           onPolygonCreated={handlePolygonCreated}
           onPolygonUpdated={handlePolygonUpdated}
           onPolygonDeleted={handlePolygonDeleted}
+          onSpeciesMarkerClick={(id) => setPopupSpeciesId(id)}
         />
         <SpeciesListPanel />
       </main>
+
+      {species.length > 0 && (
+        <button className="pdf-float-btn" onClick={handlePDFExport} disabled={isExporting}>
+          {isExporting ? '...' : 'PDF'}
+        </button>
+      )}
+
+      {popupSpecies && (
+        <SpeciesPopup species={popupSpecies} onClose={() => setPopupSpeciesId(null)} />
+      )}
 
       <TaxonSelectionModal
         isOpen={showTaxonModal}

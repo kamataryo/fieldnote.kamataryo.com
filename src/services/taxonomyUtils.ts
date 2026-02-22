@@ -1,6 +1,7 @@
 import type { Species } from '@types/species';
 import type { TaxonNode } from '@types/taxonomy';
 import { translateTaxonName } from '@constants/taxonomyTranslations';
+import { getPhylumIcon } from '@constants/taxonIcons';
 
 /**
  * 生物リストから分類群のツリー構造を生成（門→綱レベル）
@@ -77,6 +78,7 @@ export function buildTaxonomyTree(species: Species[]): TaxonNode[] {
       count: phylumData.speciesIds.length,
       children: classNodes,
       speciesIds: phylumData.speciesIds,
+      icon: getPhylumIcon(phylumName), // 英語の門名でアイコンを取得
     });
   });
 

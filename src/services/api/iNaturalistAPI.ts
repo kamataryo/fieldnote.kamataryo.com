@@ -4,6 +4,19 @@ import type { Species } from '@types/species';
 import type { INaturalistResponse, INaturalistObservation } from '@types/api';
 import { APIClient, RateLimiter } from './apiClient';
 
+// iconic_taxon_name から phylum/class を静的に解決できるマッピング
+const ICONIC_TAXON_TO_TAXONOMY: Record<string, { phylum: string; class?: string }> = {
+  Aves:           { phylum: 'Chordata', class: 'Aves' },
+  Mammalia:       { phylum: 'Chordata', class: 'Mammalia' },
+  Actinopterygii: { phylum: 'Chordata', class: 'Actinopterygii' },
+  Reptilia:       { phylum: 'Chordata', class: 'Reptilia' },
+  Amphibia:       { phylum: 'Chordata', class: 'Amphibia' },
+  Chondrichthyes: { phylum: 'Chordata', class: 'Chondrichthyes' },
+  Insecta:        { phylum: 'Arthropoda', class: 'Insecta' },
+  Arachnida:      { phylum: 'Arthropoda', class: 'Arachnida' },
+  Mollusca:       { phylum: 'Mollusca' }, // class は種により異なる
+};
+
 export class INaturalistAPI extends APIClient {
   constructor() {
     // 20回/分に制限
@@ -147,8 +160,13 @@ export class INaturalistAPI extends APIClient {
     }
 
     // === Step B: 全種の ancestor_ids を収集して祖先の {name, rank} を一括取得 ===
+    // iconic_taxon_name で phylum+class が確定できた種は ancestor_ids 収集対象から除外
     const allAncestorIds = new Set<number>();
     species.forEach((s) => {
+      const iconicName = this.taxonIconicName.get(s.id);
+      const iconicMapping = iconicName ? ICONIC_TAXON_TO_TAXONOMY[iconicName] : undefined;
+      // phylum と class の両方が確定できる場合はスキップ
+      if (iconicMapping?.class) return;
       const ids = this.taxonAncestorIds.get(s.id) || [];
       ids.forEach((id) => allAncestorIds.add(id));
     });
@@ -159,19 +177,29 @@ export class INaturalistAPI extends APIClient {
 
     const ancestorLookup = await this.fetchAncestorDetails([...allAncestorIds]);
 
-    // === Step C: 各種の taxonomy を ancestor_ids + ルックアップで構築 ===
+    // === Step C: 各種の taxonomy を構築（iconic名由来を先に適用、不足分は ancestorLookup で補完）===
     const enrichedSpecies: Species[] = species.map((s) => {
       const cached = this.taxonCache.get(s.id);
       const ancestorIds = this.taxonAncestorIds.get(s.id) || [];
+      const iconicName = this.taxonIconicName.get(s.id);
+      const iconicMapping = iconicName ? ICONIC_TAXON_TO_TAXONOMY[iconicName] : undefined;
 
       const taxonomy: Species['taxonomy'] = {};
+
+      // iconic_taxon_name 由来の taxonomy を先に適用
+      if (iconicMapping) {
+        taxonomy.phylum = iconicMapping.phylum;
+        if (iconicMapping.class) taxonomy.class = iconicMapping.class;
+      }
+
+      // ancestorLookup で不足分を補完（既に設定済みの項目は上書きしない）
       ancestorIds.forEach((id) => {
         const ancestor = ancestorLookup.get(id);
         if (!ancestor) return;
         const rank = ancestor.rank;
-        if (rank === 'kingdom') taxonomy.kingdom = ancestor.name;
-        else if (rank === 'phylum') taxonomy.phylum = ancestor.name;
-        else if (rank === 'class') taxonomy.class = ancestor.name;
+        if (rank === 'kingdom' && !taxonomy.kingdom) taxonomy.kingdom = ancestor.name;
+        else if (rank === 'phylum' && !taxonomy.phylum) taxonomy.phylum = ancestor.name;
+        else if (rank === 'class' && !taxonomy.class) taxonomy.class = ancestor.name;
         else if (rank === 'order') taxonomy.order = ancestor.name;
         else if (rank === 'family') taxonomy.family = ancestor.name;
         else if (rank === 'genus') taxonomy.genus = ancestor.name;
@@ -193,6 +221,9 @@ export class INaturalistAPI extends APIClient {
 
   // 各 taxon の祖先 ID を保持（aggregateBySpecies で観察データから取得）
   private taxonAncestorIds = new Map<number, number[]>();
+
+  // 各 taxon の iconic_taxon_name を保持（aggregateBySpecies で取得）
+  private taxonIconicName = new Map<number, string>();
 
   private aggregateBySpecies(observations: INaturalistObservation[]): Map<number, Species> {
     const map = new Map<number, Species>();
@@ -217,6 +248,11 @@ export class INaturalistAPI extends APIClient {
         // 観察データから ancestor_ids を保存
         if (obs.taxon.ancestor_ids && obs.taxon.ancestor_ids.length > 0) {
           this.taxonAncestorIds.set(taxonId, obs.taxon.ancestor_ids);
+        }
+
+        // iconic_taxon_name を保存（Step B の最適化に使用）
+        if (obs.taxon.iconic_taxon_name) {
+          this.taxonIconicName.set(taxonId, obs.taxon.iconic_taxon_name);
         }
       }
 
@@ -255,7 +291,7 @@ export class INaturalistAPI extends APIClient {
         const response = await this.requestWithRetry<any>({
           method: 'GET',
           url: '/taxa',
-          params: { id: chunk.join(','), per_page: chunkSize },
+          params: { id: chunk.join(','), per_page: chunkSize, rank: 'phylum,class' },
         });
         (response.results || []).forEach((t: any) => {
           lookup.set(t.id, { name: t.name, rank: t.rank });
